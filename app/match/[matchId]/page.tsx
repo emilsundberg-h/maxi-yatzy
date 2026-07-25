@@ -1,0 +1,202 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { DiceColumn } from "@/components/dice/DiceColumn";
+import { ActivityFeed } from "@/components/match/ActivityFeed";
+import { RollControls } from "@/components/match/RollControls";
+import { ScorecardGrid } from "@/components/scorecard/ScorecardGrid";
+import { totalScore } from "@/lib/domain/scoring";
+import { canRoll as engineCanRoll } from "@/lib/domain/turn";
+import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
+import { useMatchStore } from "@/lib/store/useMatchStore";
+import { usePlayersStore } from "@/lib/store/usePlayersStore";
+import { getProfiles, type Profile } from "@/lib/supabase/profiles";
+
+export default function MatchPage() {
+  const { matchId } = useParams<{ matchId: string }>();
+  const {
+    match,
+    matchPlayers,
+    players,
+    turn,
+    poolDeltaSoFar,
+    loading,
+    error,
+    loadMatch,
+    subscribeToMatch,
+    roll,
+    toggleLock,
+    score,
+    reset,
+  } = useMatchStore();
+  const localPlayerId = usePlayersStore((s) => s.localPlayerId);
+  const events = useActivityFeed(match?.id);
+  const [handoffAcknowledged, setHandoffAcknowledged] = useState(false);
+  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, Profile>>({});
+
+  const turnKey = match ? `${match.currentPlayerIndex}:${match.currentTurnNumber}` : undefined;
+  const [trackedTurnKey, setTrackedTurnKey] = useState(turnKey);
+  if (turnKey !== trackedTurnKey) {
+    setTrackedTurnKey(turnKey);
+    setHandoffAcknowledged(false);
+  }
+
+  useEffect(() => {
+    loadMatch(matchId);
+    const unsubscribe = subscribeToMatch(matchId);
+    return () => {
+      unsubscribe();
+      reset();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId]);
+
+  useEffect(() => {
+    const userIds = [
+      ...new Set(Object.values(players).map((p) => p.linkedUserId).filter((id): id is string => !!id)),
+    ];
+    if (userIds.length === 0) return;
+    getProfiles(userIds).then(setProfilesByUserId);
+  }, [players]);
+
+  if (loading || !match) {
+    return <div className="flex-1 p-8 text-center text-paper-dim">Laddar match…</div>;
+  }
+  if (error) {
+    return <div className="flex-1 p-8 text-center text-red-400">{error}</div>;
+  }
+
+  const activePlayerId = match.playerIds[match.currentPlayerIndex];
+  const activeMatchPlayer = matchPlayers.find((mp) => mp.playerId === activePlayerId);
+  const activePlayerName = players[activePlayerId]?.name ?? "Spelare";
+  const pool = activeMatchPlayer ? activeMatchPlayer.pool + poolDeltaSoFar : 0;
+  const isLocalPlayersTurn =
+    match.mode === "shared-device" || activePlayerId === localPlayerId;
+  const hasRolled = turn.rollsUsedThisTurn > 0;
+
+  if (match.status === "completed") {
+    const ranked = [...matchPlayers].sort(
+      (a, b) => totalScore(b.scores) - totalScore(a.scores),
+    );
+    const winnerId = ranked[0]?.playerId;
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center gap-6 p-4 sm:p-8">
+        <div className="text-[10px] font-extrabold tracking-[.24em] text-gold">
+          MATCH AVSLUTAD
+        </div>
+        <h1 className="max-w-full truncate px-4 text-center font-serif text-4xl font-semibold text-paper">
+          {winnerId ? `${players[winnerId]?.name ?? "–"} vann!` : "Match klar"}
+        </h1>
+        {winnerId && (
+          <p className="text-sm text-paper-dim">
+            med {totalScore(ranked[0].scores)} poäng
+          </p>
+        )}
+        <div className="w-full">
+          <ScorecardGrid
+            matchPlayers={ranked}
+            players={players}
+            profiles={profilesByUserId}
+            playerOrder={ranked.map((mp) => mp.playerId)}
+            activePlayerId=""
+            canScoreActivePlayer={false}
+          />
+        </div>
+        <Link
+          href="/"
+          className="rounded-2xl px-6 py-3 font-extrabold tracking-[.08em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
+          style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+        >
+          TILL MATCHER
+        </Link>
+      </div>
+    );
+  }
+
+  if (match.mode === "shared-device" && !handoffAcknowledged) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 text-center">
+        <p className="text-[11px] font-bold tracking-[.2em] text-sage">SKICKA ENHETEN TILL</p>
+        <h1 className="max-w-full truncate font-serif text-4xl font-semibold text-paper sm:text-5xl">
+          {activePlayerName}
+        </h1>
+        <p className="text-xs text-muted">Kategori {match.currentTurnNumber}/20</p>
+        <button
+          type="button"
+          onClick={() => setHandoffAcknowledged(true)}
+          className="mt-2 rounded-2xl px-8 py-4 text-[15px] font-extrabold tracking-[.08em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4),inset_0_2px_0_rgba(255,255,255,.45)]"
+          style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+        >
+          JAG ÄR REDO
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 p-3">
+      <div className="flex items-center justify-between">
+        <Link
+          href="/"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-gold/25 bg-white/5 text-sm text-gold-bright"
+        >
+          ‹
+        </Link>
+        <div className="text-center">
+          <div className="text-[9px] font-bold tracking-[.2em] text-gold-bright">
+            RUNDA {match.currentTurnNumber}/20 ·{" "}
+            {isLocalPlayersTurn ? "DIN TUR" : `${activePlayerName}S TUR`}
+          </div>
+        </div>
+        <div className="w-7" />
+      </div>
+
+      <div className="flex items-start gap-2.5">
+        <div className="min-w-0 flex-1">
+          <ScorecardGrid
+            matchPlayers={matchPlayers}
+            players={players}
+            profiles={profilesByUserId}
+            playerOrder={match.playerIds}
+            activePlayerId={activePlayerId}
+            previewDice={isLocalPlayersTurn && hasRolled ? turn.dice : undefined}
+            canScoreActivePlayer={isLocalPlayersTurn && hasRolled}
+            onScore={score}
+          />
+          {match.mode === "separate-devices" && (
+            <div className="mt-4">
+              <ActivityFeed events={events} players={players} />
+            </div>
+          )}
+        </div>
+
+        <div className="sticky top-2 flex w-[104px] flex-none flex-col items-center gap-2 rounded-2xl border border-gold/15 bg-black/25 px-2 py-3 sm:w-[130px] sm:px-3">
+          {isLocalPlayersTurn ? (
+            <>
+              <DiceColumn
+                dice={turn.dice}
+                locked={turn.locked}
+                rollsUsedThisTurn={turn.rollsUsedThisTurn}
+                interactive
+                onToggleLock={toggleLock}
+                size={40}
+              />
+              <RollControls
+                rollsUsedThisTurn={turn.rollsUsedThisTurn}
+                pool={pool}
+                canRoll={engineCanRoll(turn, pool)}
+                onRoll={roll}
+              />
+            </>
+          ) : (
+            <p className="py-4 text-center text-[11px] text-paper-dim">
+              Väntar på {activePlayerName}…
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,107 @@
+export type DieValue = 1 | 2 | 3 | 4 | 5 | 6;
+
+export type Dice = [DieValue, DieValue, DieValue, DieValue, DieValue, DieValue];
+export type Locked = [boolean, boolean, boolean, boolean, boolean, boolean];
+
+export type CategoryId =
+  | "ones"
+  | "twos"
+  | "threes"
+  | "fours"
+  | "fives"
+  | "sixes"
+  | "onePair"
+  | "twoPairs"
+  | "threePairs"
+  | "threeOfAKind"
+  | "fourOfAKind"
+  | "fiveOfAKind"
+  | "smallStraight"
+  | "largeStraight"
+  | "fullStraight"
+  | "kak"
+  | "villa"
+  | "torn"
+  | "chance"
+  | "maxiYatzy";
+
+export const UPPER_CATEGORY_IDS: readonly CategoryId[] = [
+  "ones",
+  "twos",
+  "threes",
+  "fours",
+  "fives",
+  "sixes",
+];
+
+export const LOWER_CATEGORY_IDS: readonly CategoryId[] = [
+  "onePair",
+  "twoPairs",
+  "threePairs",
+  "threeOfAKind",
+  "fourOfAKind",
+  "fiveOfAKind",
+  "smallStraight",
+  "largeStraight",
+  "fullStraight",
+  "kak",
+  "villa",
+  "torn",
+  "chance",
+  "maxiYatzy",
+];
+
+export const ALL_CATEGORY_IDS: readonly CategoryId[] = [
+  ...UPPER_CATEGORY_IDS,
+  ...LOWER_CATEGORY_IDS,
+];
+
+export const UPPER_BONUS_THRESHOLD = 84;
+export const UPPER_BONUS_AMOUNT = 100;
+
+export interface Player {
+  id: string;
+  name: string;
+  createdAt: string;
+  linkedUserId: string | null;
+}
+
+export type MatchMode = "shared-device" | "separate-devices";
+export type MatchStatus = "in_progress" | "completed";
+
+export interface Match {
+  id: string;
+  mode: MatchMode;
+  status: MatchStatus;
+  playerIds: string[];
+  currentPlayerIndex: number;
+  currentTurnNumber: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
+export interface MatchPlayer {
+  matchId: string;
+  playerId: string;
+  scores: Partial<Record<CategoryId, number>>;
+  pool: number;
+}
+
+export type ActivityEventType =
+  | "roll"
+  | "roll_borrowed"
+  | "lock_toggle"
+  | "category_scored"
+  | "roll_banked"
+  | "turn_started";
+
+export interface ActivityEvent {
+  id: string;
+  matchId: string;
+  playerId: string;
+  turnNumber: number;
+  type: ActivityEventType;
+  payload: unknown;
+  createdAt: string;
+}

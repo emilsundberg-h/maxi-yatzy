@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #070808;
+  --color-felt-deep: #071f16;
+  --color-felt-mid: #0f3a2b;
+  --color-felt-bright: #1c5d45;
+  --color-gold: #c9a959;
+  --color-gold-bright: #e9c877;
+  --color-gold-deep: #b58a37;
+  --color-paper: #f4efe3;
+  --color-paper-dim: #d7d2c4;
+  --color-muted: #8f887a;
+  --color-muted-dim: #6f6a5e;
+  --color-sage: #7e9082;
+
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", serif;
+  --font-sans: var(--font-manrope), "Manrope", sans-serif;
+
+  --animate-mx-tumble: mx-tumble 0.7s cubic-bezier(0.34, 0.06, 0.5, 1) infinite;
+
+  @keyframes mx-tumble {
+    0% {
+      transform: rotate(-18deg) translateY(-3px) scale(0.98);
+    }
+    50% {
+      transform: rotate(184deg) translateY(3px) scale(1.02);
+    }
+    100% {
+      transform: rotate(342deg) translateY(-3px) scale(0.98);
+    }
+  }
+}
+
+html,
+body {
+  min-height: 100%;
+  background: radial-gradient(
+    135% 95% at 50% -10%,
+    #1c5d45 0%,
+    #0f3a2b 46%,
+    #071f16 100%
+  );
+  background-attachment: fixed;
+  color: var(--color-paper);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 169, 89, 0.28);
+  border-radius: 99px;
+}
