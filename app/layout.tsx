@@ -24,6 +24,12 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Maxi Yatzy",
   },
+  // Next only emits the modern "mobile-web-app-capable" meta tag. Some iOS
+  // versions specifically need the legacy apple-prefixed one to actually
+  // launch chrome-less standalone from the home screen — without it they can
+  // fall back to a mode that still shows a sliver of native Safari UI, which
+  // no page-level CSS can remove since it isn't part of the page at all.
+  other: { "apple-mobile-web-app-capable": "yes" },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
