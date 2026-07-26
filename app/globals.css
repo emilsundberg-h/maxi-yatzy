@@ -46,24 +46,6 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* TEMPORARY DIAGNOSTIC — a loud fixed block pinned to the very bottom of the
-   viewport, above everything (z-index 99999). If this still leaves the white
-   strip visible below/around it, that strip is native OS/Safari chrome
-   outside the page entirely — no page CSS could ever be the fix. If it
-   fully covers the white strip, the strip is something in our own render
-   and is fixable. Remove after diagnosis. */
-body::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 150px;
-  background: magenta;
-  z-index: 99999;
-  pointer-events: none;
-}
-
 body {
   font-family: var(--font-sans);
 }
