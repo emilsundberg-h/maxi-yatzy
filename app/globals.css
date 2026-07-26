@@ -35,6 +35,13 @@
 html,
 body {
   min-height: 100%;
+  /* 100% resolves through a chain of percentage heights that isn't always
+     reliable in an iOS standalone PWA — the box can end up a bit short of
+     the real visual viewport, leaving a static gap at the bottom where the
+     WKWebView's own white background shows. 100dvh pins it to the actual
+     viewport directly; kept after the % rule as a progressive-enhancement
+     override for browsers that support dvh, not a replacement. */
+  min-height: 100dvh;
   background: radial-gradient(
     135% 95% at 50% -10%,
     #1c5d45 0%,
