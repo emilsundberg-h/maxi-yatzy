@@ -76,7 +76,10 @@ export default function PlayersPage() {
 
       <div className="flex flex-col gap-1.5">
         {players.map((p) => {
-          const avatarUrl = p.linkedUserId ? profilesByUserId[p.linkedUserId]?.avatarUrl : undefined;
+          const avatarUrl =
+            (p.linkedUserId ? profilesByUserId[p.linkedUserId]?.avatarUrl : undefined) ??
+            p.avatarUrl ??
+            undefined;
           return (
             <div
               key={p.id}

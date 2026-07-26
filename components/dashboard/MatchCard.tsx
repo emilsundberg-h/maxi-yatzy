@@ -65,7 +65,10 @@ export function MatchCard({ match, matchPlayers, players, profiles, localPlayerI
       <div className="mt-2 flex items-center -space-x-1.5">
         {match.playerIds.slice(0, 5).map((id) => {
           const linkedUserId = players[id]?.linkedUserId;
-          const avatarUrl = linkedUserId ? profiles?.[linkedUserId]?.avatarUrl : undefined;
+          const avatarUrl =
+            (linkedUserId ? profiles?.[linkedUserId]?.avatarUrl : undefined) ??
+            players[id]?.avatarUrl ??
+            undefined;
           return (
             <div
               key={id}

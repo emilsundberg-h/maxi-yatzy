@@ -64,6 +64,7 @@ export interface Player {
   name: string;
   createdAt: string;
   linkedUserId: string | null;
+  avatarUrl: string | null;
 }
 
 export type MatchMode = "shared-device" | "separate-devices";

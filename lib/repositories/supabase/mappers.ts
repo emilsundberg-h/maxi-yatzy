@@ -9,6 +9,7 @@ export interface PlayerRow {
   name: string;
   created_at: string;
   linked_user_id: string | null;
+  avatar_url: string | null;
 }
 
 export interface MatchRow {
@@ -46,6 +47,7 @@ export function toPlayer(row: PlayerRow): Player {
     name: row.name,
     createdAt: row.created_at,
     linkedUserId: row.linked_user_id,
+    avatarUrl: row.avatar_url,
   };
 }
 

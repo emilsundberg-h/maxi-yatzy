@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MatchMode } from "@/lib/domain/types";
+import { downscaleImage } from "@/lib/downscaleImage";
 import { getRepositories } from "@/lib/repositories";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
-import { searchProfilesByUsername, type Profile } from "@/lib/supabase/profiles";
+import { getProfiles, searchProfilesByUsername, type Profile } from "@/lib/supabase/profiles";
 
 function pillClass(active: boolean) {
   return `flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
@@ -160,22 +161,58 @@ function InvitePicker({
 
 export default function NewMatchPage() {
   const router = useRouter();
-  const { players, load, createPlayer, localPlayerId } = usePlayersStore();
-  const [mode, setMode] = useState<MatchMode>("shared-device");
+  const { players, load, createPlayer, localPlayerId, setPlayerAvatar } = usePlayersStore();
+  const [mode, setMode] = useState<MatchMode>("separate-devices");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [inviteTargets, setInviteTargets] = useState<Record<string, InviteTarget>>({});
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [addingPlayer, setAddingPlayer] = useState(false);
+  const [newAvatarBlob, setNewAvatarBlob] = useState<Blob | null>(null);
+  const [newAvatarPreview, setNewAvatarPreview] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const newAvatarInputRef = useRef<HTMLInputElement>(null);
+  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, Profile>>({});
 
   useEffect(() => {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const userIds = [
+      ...new Set(players.map((p) => p.linkedUserId).filter((id): id is string => !!id)),
+    ];
+    if (userIds.length === 0) return;
+    getProfiles(userIds).then(setProfilesByUserId);
+  }, [players]);
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  }
+
+  function playerAvatarUrl(id: string): string | undefined {
+    const p = players.find((x) => x.id === id);
+    if (!p) return undefined;
+    return (p.linkedUserId ? profilesByUserId[p.linkedUserId]?.avatarUrl : undefined) ?? p.avatarUrl ?? undefined;
+  }
+
+  async function handleNewAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarError(null);
+    try {
+      const blob = await downscaleImage(file);
+      if (newAvatarPreview) URL.revokeObjectURL(newAvatarPreview);
+      setNewAvatarBlob(blob);
+      setNewAvatarPreview(URL.createObjectURL(blob));
+    } catch {
+      setAvatarError("Kunde inte läsa bilden.");
+    } finally {
+      if (newAvatarInputRef.current) newAvatarInputRef.current.value = "";
+    }
   }
 
   async function handleAddPlayer() {
@@ -188,9 +225,27 @@ export default function NewMatchPage() {
     if (!name) return;
     setAddingPlayer(true);
     setNewName("");
+    const avatarBlob = newAvatarBlob;
+    if (newAvatarPreview) URL.revokeObjectURL(newAvatarPreview);
+    setNewAvatarBlob(null);
+    setNewAvatarPreview(null);
     try {
       const player = await createPlayer(name);
       setSelectedIds((prev) => [...prev, player.id]);
+      if (avatarBlob) {
+        try {
+          const res = await fetch(`/api/players/${player.id}/avatar`, {
+            method: "POST",
+            headers: { "Content-Type": "image/jpeg" },
+            body: avatarBlob,
+          });
+          const data = await res.json();
+          if (res.ok) setPlayerAvatar(player.id, data.avatarUrl);
+          else setAvatarError("Spelaren skapades, men bilden kunde inte sparas.");
+        } catch {
+          setAvatarError("Spelaren skapades, men bilden kunde inte sparas.");
+        }
+      }
     } finally {
       setAddingPlayer(false);
     }
@@ -222,6 +277,10 @@ export default function NewMatchPage() {
     router.push(`/match/${match.id}`);
   }
 
+  const selectedNames = selectedIds
+    .map((id) => players.find((p) => p.id === id)?.name)
+    .filter((name): name is string => !!name);
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 p-6 pt-8">
       <div>
@@ -236,18 +295,6 @@ export default function NewMatchPage() {
         <div className="flex gap-2 rounded-2xl bg-white/5 p-1">
           <button
             type="button"
-            onClick={() => setMode("shared-device")}
-            className={pillClass(mode === "shared-device")}
-            style={
-              mode === "shared-device"
-                ? { background: "linear-gradient(150deg,#e6d0a0,#c7a862)" }
-                : undefined
-            }
-          >
-            Skicka runt enheten
-          </button>
-          <button
-            type="button"
             onClick={() => setMode("separate-devices")}
             className={pillClass(mode === "separate-devices")}
             style={
@@ -258,71 +305,135 @@ export default function NewMatchPage() {
           >
             Egna enheter
           </button>
+          <button
+            type="button"
+            onClick={() => setMode("shared-device")}
+            className={pillClass(mode === "shared-device")}
+            style={
+              mode === "shared-device"
+                ? { background: "linear-gradient(150deg,#e6d0a0,#c7a862)" }
+                : undefined
+            }
+          >
+            Skicka runt enheten
+          </button>
         </div>
       </div>
 
       <div>
-        <p className="mb-2 text-[10px] font-extrabold tracking-[.2em] text-sage">
-          SPELARE ({selectedIds.length})
-        </p>
-        <div className="flex flex-col gap-1.5">
-          {players.map((p) => {
-            const isSelf = p.id === localPlayerId;
-            const isSelected = selectedIds.includes(p.id);
-            const showInvite = mode === "separate-devices" && isSelected && !isSelf;
-            return (
-              <div
-                key={p.id}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5"
+        <p className="mb-2 text-[10px] font-extrabold tracking-[.2em] text-sage">SPELARE</p>
+        <button
+          type="button"
+          onClick={() => setPickerOpen((o) => !o)}
+          className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper"
+        >
+          <span className="flex-1">
+            {selectedNames.length > 0 ? selectedNames.join(", ") : "Spelare"}
+          </span>
+          <span className="text-xs text-paper-dim">{pickerOpen ? "▲" : "▼"}</span>
+        </button>
+
+        {pickerOpen && (
+          <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">
+            <div className="flex flex-col gap-1.5">
+              {players.map((p) => {
+                const isSelf = p.id === localPlayerId;
+                const isSelected = selectedIds.includes(p.id);
+                const showInvite = mode === "separate-devices" && isSelected && !isSelf;
+                const avatarUrl = playerAvatarUrl(p.id);
+                return (
+                  <div
+                    key={p.id}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5"
+                  >
+                    <label className="flex items-center gap-2.5 text-paper">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(p.id)}
+                        className="accent-[#c9a959]"
+                      />
+                      <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          avatarInitials(p.name)
+                        )}
+                      </div>
+                      <span>{p.name}</span>
+                      {isSelf && <span className="ml-auto text-xs text-muted">Du</span>}
+                    </label>
+                    {showInvite && (
+                      <InvitePicker
+                        playerName={p.name}
+                        onChange={(target) =>
+                          setInviteTargets((prev) => {
+                            const next = { ...prev };
+                            if (target) next[p.id] = target;
+                            else delete next[p.id];
+                            return next;
+                          })
+                        }
+                      />
+                    )}
+                  </div>
+                );
+              })}
+              {players.length === 0 && (
+                <p className="text-sm text-muted-dim">Inga spelare ännu — lägg till en nedan.</p>
+              )}
+            </div>
+
+            <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+              <button
+                type="button"
+                onClick={() => newAvatarInputRef.current?.click()}
+                disabled={addingPlayer}
+                className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-gold/30 bg-white/5 text-[10px] text-paper-dim disabled:opacity-60"
               >
-                <label className="flex items-center gap-2 text-paper">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelect(p.id)}
-                    className="accent-[#c9a959]"
-                  />
-                  <span>{p.name}</span>
-                  {isSelf && <span className="ml-auto text-xs text-muted">Du</span>}
-                </label>
-                {showInvite && (
-                  <InvitePicker
-                    playerName={p.name}
-                    onChange={(target) =>
-                      setInviteTargets((prev) => {
-                        const next = { ...prev };
-                        if (target) next[p.id] = target;
-                        else delete next[p.id];
-                        return next;
-                      })
-                    }
-                  />
+                {newAvatarPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={newAvatarPreview} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  "＋"
                 )}
-              </div>
-            );
-          })}
-          {players.length === 0 && (
-            <p className="text-sm text-muted-dim">Inga spelare ännu — lägg till en nedan.</p>
-          )}
-        </div>
-        <div className="mt-2 flex gap-2">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Nytt spelarnamn"
-            disabled={addingPlayer}
-            className="flex-1 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-paper placeholder:text-muted-dim disabled:opacity-60"
-            onKeyDown={(e) => e.key === "Enter" && handleAddPlayer()}
-          />
-          <button
-            type="button"
-            onClick={handleAddPlayer}
-            disabled={addingPlayer}
-            className="rounded-xl border border-gold/25 bg-white/5 px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
-          >
-            Lägg till
-          </button>
-        </div>
+              </button>
+              <input
+                ref={newAvatarInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleNewAvatarChange}
+                className="hidden"
+              />
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Ny spelare"
+                disabled={addingPlayer}
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-paper placeholder:text-muted-dim disabled:opacity-60"
+                onKeyDown={(e) => e.key === "Enter" && handleAddPlayer()}
+              />
+              <button
+                type="button"
+                onClick={handleAddPlayer}
+                disabled={addingPlayer}
+                className="shrink-0 rounded-xl border border-gold/25 bg-white/5 px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
+              >
+                Lägg till
+              </button>
+            </div>
+            {avatarError && <p className="mt-1 text-xs text-red-400">{avatarError}</p>}
+
+            <button
+              type="button"
+              onClick={() => setPickerOpen(false)}
+              className="mt-3 w-full rounded-xl bg-white/5 py-2 text-sm font-semibold text-paper-dim"
+            >
+              Klar
+            </button>
+          </div>
+        )}
       </div>
 
       <button

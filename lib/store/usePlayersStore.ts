@@ -10,6 +10,7 @@ interface PlayersStoreState {
   load: () => Promise<void>;
   createPlayer: (name: string) => Promise<Player>;
   setLocalPlayerId: (id: string) => Promise<void>;
+  setPlayerAvatar: (playerId: string, avatarUrl: string) => void;
 }
 
 export const usePlayersStore = create<PlayersStoreState>((set, get) => ({
@@ -40,5 +41,11 @@ export const usePlayersStore = create<PlayersStoreState>((set, get) => ({
     const repos = getRepositories();
     await repos.settings.setLocalPlayerId(id);
     set({ localPlayerId: id });
+  },
+
+  setPlayerAvatar(playerId, avatarUrl) {
+    set({
+      players: get().players.map((p) => (p.id === playerId ? { ...p, avatarUrl } : p)),
+    });
   },
 }));

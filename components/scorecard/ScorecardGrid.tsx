@@ -121,7 +121,10 @@ export function ScorecardGrid({
         {orderedPlayerIds.map((id) => {
           const isActive = id === activePlayerId;
           const linkedUserId = players[id]?.linkedUserId;
-          const avatarUrl = linkedUserId ? profiles?.[linkedUserId]?.avatarUrl : undefined;
+          const avatarUrl =
+            (linkedUserId ? profiles?.[linkedUserId]?.avatarUrl : undefined) ??
+            players[id]?.avatarUrl ??
+            undefined;
           return (
             <div
               key={id}

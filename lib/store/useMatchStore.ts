@@ -240,6 +240,21 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
         type: "turn_started",
         payload: null,
       });
+
+      // Best-effort "it's your turn" push for the player we just handed off
+      // to. Fire-and-forget: never blocks the UI, and the route itself is a
+      // no-op for shared-device matches / players without a linked account.
+      if (nextMatch.mode === "separate-devices") {
+        fetch("/api/matches/notify-turn", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            matchId: nextMatch.id,
+            playerId: currentPlayerId(nextMatch),
+            turnNumber: nextMatch.currentTurnNumber,
+          }),
+        }).catch(() => {});
+      }
     }
   },
 

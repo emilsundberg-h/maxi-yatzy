@@ -9,6 +9,7 @@ export class IndexedDbPlayerRepository implements PlayerRepository {
       name,
       createdAt: new Date().toISOString(),
       linkedUserId: null,
+      avatarUrl: null,
     };
     const db = await getDb();
     await db.put("players", player);
