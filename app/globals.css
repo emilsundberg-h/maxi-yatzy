@@ -41,8 +41,13 @@ body {
     #0f3a2b 46%,
     #071f16 100%
   );
-  background-attachment: fixed;
   color: var(--color-paper);
+  /* iOS Safari/WKWebView (standalone PWA in particular) shows its own white
+     background through the gap during the elastic rubber-band bounce past
+     the top/bottom of the page — background-attachment: fixed is also known
+     to drop out mid-bounce there. overscroll-behavior stops the bounce
+     itself instead of trying to keep a fixed background painted through it. */
+  overscroll-behavior-y: none;
 }
 
 body {
