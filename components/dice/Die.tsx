@@ -14,11 +14,64 @@ const PIP_MAPS: Record<DieValue, number[]> = {
 };
 
 const GOLD = "#c9a959";
-const EDGE_SHADOW =
-  "inset 0 1.5px 0 rgba(255,255,255,.85), inset 0 -2px 3px rgba(120,100,60,.25)";
+
+// Each face keeps a fixed value/pip pattern (opposite faces sum to 7, like a
+// real die) and never changes. Rolling only rotates the cube itself so a
+// different face ends up pointing at the viewer — this is what makes the
+// mid-roll tumble show real face transitions instead of an instant swap.
+const FACES: { value: DieValue; transform: (half: number) => string; shade: number }[] = [
+  { value: 1, transform: (h) => `translateZ(${h}px)`, shade: 1 },
+  { value: 6, transform: (h) => `rotateY(180deg) translateZ(${h}px)`, shade: 0.86 },
+  { value: 2, transform: (h) => `rotateY(90deg) translateZ(${h}px)`, shade: 0.94 },
+  { value: 5, transform: (h) => `rotateY(-90deg) translateZ(${h}px)`, shade: 0.94 },
+  { value: 3, transform: (h) => `rotateX(90deg) translateZ(${h}px)`, shade: 1.05 },
+  { value: 4, transform: (h) => `rotateX(-90deg) translateZ(${h}px)`, shade: 0.9 },
+];
+
+// Cube rotation (deg) that brings each value's face to point at the viewer,
+// derived from the face transforms above (global rotation that cancels the
+// face's own local rotation).
+const SETTLE: Record<DieValue, { x: number; y: number }> = {
+  1: { x: 0, y: 0 },
+  2: { x: 0, y: -90 },
+  3: { x: -90, y: 0 },
+  4: { x: 90, y: 0 },
+  5: { x: 0, y: 90 },
+  6: { x: 0, y: 180 },
+};
+
+// A die viewed dead-on (0,0 tilt) reads as a flat square — real dice photos
+// show a slight elevated angle so the top and side edges are visible even at
+// rest. Added on top of the settle rotation, not instead of it, so the
+// correct face still reads clearly.
+const IDLE_TILT = { x: 12, y: 18 };
+
+function settleTarget(value: DieValue): { x: number; y: number } {
+  const s = SETTLE[value];
+  return { x: s.x + IDLE_TILT.x, y: s.y + IDLE_TILT.y };
+}
+
+// Smallest forward (never backward) rotation from `current` that lands on
+// `target` modulo 360 — keeps every roll spinning further in the same
+// direction instead of ever snapping back.
+function wrapForward(current: number, target: number): number {
+  const remainder = (((target - current) % 360) + 360) % 360;
+  return current + remainder;
+}
 
 function randomTilt(): number {
-  return Math.random() * 20 - 10;
+  return Math.random() * 16 - 8;
+}
+
+function randomSpins(): number {
+  return 2 + Math.floor(Math.random() * 2);
+}
+
+export const ROLL_MIN_DURATION_S = 0.65;
+export const ROLL_MAX_DURATION_S = 0.95;
+
+function randomDuration(): number {
+  return ROLL_MIN_DURATION_S + Math.random() * (ROLL_MAX_DURATION_S - ROLL_MIN_DURATION_S);
 }
 
 interface DieProps {
@@ -38,30 +91,63 @@ export function Die({
   onToggleLock,
   size = 56,
 }: DieProps) {
+  const [rotX, setRotX] = useState(() => settleTarget(value).x);
+  const [rotY, setRotY] = useState(() => settleTarget(value).y);
   const [spinning, setSpinning] = useState(false);
+  const [duration, setDuration] = useState(0.7);
   const [restTilt, setRestTilt] = useState(randomTilt);
   const [trackedRolls, setTrackedRolls] = useState(rollsUsedThisTurn);
+  const [trackedLocked, setTrackedLocked] = useState(locked);
 
   if (rollsUsedThisTurn !== trackedRolls) {
     setTrackedRolls(rollsUsedThisTurn);
     if (!locked) {
-      setSpinning(true);
+      const target = settleTarget(value);
+      setRotX(wrapForward(rotX, target.x) + randomSpins() * 360);
+      setRotY(wrapForward(rotY, target.y) + randomSpins() * 360);
+      setDuration(randomDuration());
       setRestTilt(randomTilt());
+      setSpinning(true);
     }
+  }
+
+  // Locking should read unmistakably: the die straightens all the way to a
+  // dead-on view (no idle 3D tilt) and picks up the gold ring, instead of
+  // staying at the same angled "raised" look as the other unlocked dice.
+  // This is a snap, not a roll — no spin animation on lock/unlock.
+  if (locked !== trackedLocked) {
+    setTrackedLocked(locked);
+    const target = locked ? SETTLE[value] : settleTarget(value);
+    setRotX(target.x);
+    setRotY(target.y);
+    setDuration(0);
   }
 
   useEffect(() => {
     if (!spinning) return;
-    const timeout = setTimeout(() => setSpinning(false), 700);
+    const timeout = setTimeout(() => setSpinning(false), duration * 1000);
     return () => clearTimeout(timeout);
-  }, [spinning]);
+  }, [spinning, duration]);
 
-  const on = new Set(PIP_MAPS[value]);
-  const boxShadow = spinning
-    ? "0 14px 22px rgba(0,0,0,.5)"
-    : locked
-      ? `${EDGE_SHADOW}, 0 6px 14px rgba(0,0,0,.45), 0 0 0 2px ${GOLD}, 0 0 18px ${GOLD}66`
-      : `${EDGE_SHADOW}, 0 12px 20px rgba(0,0,0,.5)`;
+  const half = size / 2;
+  // Locked dice sit flush (like they've been pressed down and left); unlocked
+  // interactive dice float with a bigger, softer shadow so it's visually
+  // obvious they can still be picked up and tapped.
+  // The ring's spread has to clear the die's own rotated 3D footprint — the
+  // cube visually pokes a few px past its flat outer box at some angles
+  // (perspective/rotation), which otherwise paints right over a thin ring.
+  const boxShadow = locked
+    ? `0 4px 10px rgba(0,0,0,.4), 0 0 0 5px ${GOLD}, 0 0 22px ${GOLD}aa`
+    : interactive
+      ? "0 16px 24px rgba(0,0,0,.45), 0 4px 6px rgba(0,0,0,.25)"
+      : "0 8px 14px rgba(0,0,0,.35)";
+  const restY = locked ? 0 : interactive ? -size * 0.08 : 0;
+
+  // Faces are rendered slightly larger than the nominal cube size and pulled
+  // back in with a negative inset, so adjacent rounded corners overlap
+  // instead of leaving a gap at the seam where two faces meet.
+  const overlap = size * 0.05;
+  const radius = size * 0.12;
 
   return (
     <motion.button
@@ -70,46 +156,80 @@ export function Die({
       disabled={!interactive}
       aria-pressed={locked}
       aria-label={`Tärning visar ${value}${locked ? ", låst" : ""}`}
-      animate={
-        spinning
-          ? { rotate: [-18, 184, 342], y: [-3, 3, -3], scale: [0.98, 1.02, 0.98] }
-          : { rotate: locked ? 0 : restTilt, y: 0, scale: 1 }
-      }
-      transition={
-        spinning
-          ? { duration: 0.7, ease: [0.34, 0.06, 0.5, 1] }
-          : { duration: 0.3, ease: "easeOut" }
-      }
+      whileHover={interactive ? { scale: 1.06 } : undefined}
+      whileTap={interactive ? { scale: 0.93 } : undefined}
+      animate={{
+        y: spinning ? [0, -size * 0.3, size * 0.04, restY] : restY,
+        scale: spinning ? [1, 1.05, 0.97, 1] : 1,
+      }}
+      transition={{ duration, ease: "easeOut" }}
       style={{
         width: size,
         height: size,
-        borderRadius: size * 0.24,
-        background: "linear-gradient(150deg,#faf5ea 0%,#ece2cd 60%,#ddd0b4 100%)",
-        display: "grid",
-        gridTemplateColumns: "repeat(3,1fr)",
-        gridTemplateRows: "repeat(3,1fr)",
-        gap: size * 0.06,
-        padding: size * 0.15,
+        perspective: size * 7,
         boxShadow,
-        boxSizing: "border-box",
+        borderRadius: radius,
+        background: "transparent",
+        border: "none",
+        padding: 0,
       }}
-      className={`shrink-0 ${interactive ? "cursor-pointer active:brightness-95" : "cursor-default opacity-95"}`}
+      className={`shrink-0 ${interactive ? "cursor-pointer" : "cursor-default opacity-95"}`}
     >
-      {Array.from({ length: 9 }, (_, i) => (
-        <div key={i} className="flex items-center justify-center">
-          {on.has(i) && (
+      <motion.div
+        animate={{ rotateX: rotX, rotateY: rotY, rotateZ: locked ? 0 : restTilt }}
+        transition={{
+          rotateX: { duration, ease: [0.22, 0.61, 0.36, 1] },
+          rotateY: { duration, ease: [0.22, 0.61, 0.36, 1] },
+          rotateZ: { duration: 0.3, ease: "easeOut" },
+        }}
+        style={{
+          width: size,
+          height: size,
+          position: "relative",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        {FACES.map((face) => {
+          const on = new Set(PIP_MAPS[face.value]);
+          return (
             <div
+              key={face.value}
               style={{
-                width: size * 0.15,
-                height: size * 0.15,
-                borderRadius: "50%",
-                background: "#241f16",
-                boxShadow: "inset 0 -1px 1px rgba(0,0,0,.35)",
+                position: "absolute",
+                inset: -overlap,
+                transform: face.transform(half),
+                backfaceVisibility: "hidden",
+                borderRadius: radius,
+                background: `linear-gradient(150deg, rgba(250,245,234,${face.shade}) 0%, rgba(236,226,205,${face.shade}) 60%, rgba(221,208,180,${face.shade}) 100%)`,
+                boxShadow:
+                  "inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)",
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gridTemplateRows: "repeat(3,1fr)",
+                gap: size * 0.06,
+                padding: size * 0.15 + overlap,
+                boxSizing: "border-box",
               }}
-            />
-          )}
-        </div>
-      ))}
+            >
+              {Array.from({ length: 9 }, (_, i) => (
+                <div key={i} className="flex items-center justify-center">
+                  {on.has(i) && (
+                    <div
+                      style={{
+                        width: size * 0.15,
+                        height: size * 0.15,
+                        borderRadius: "50%",
+                        background: "#241f16",
+                        boxShadow: "inset 0 -1px 1px rgba(0,0,0,.35)",
+                      }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </motion.div>
     </motion.button>
   );
 }

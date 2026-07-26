@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DiceColumn } from "@/components/dice/DiceColumn";
+import { ROLL_MAX_DURATION_S } from "@/components/dice/Die";
 import { ActivityFeed } from "@/components/match/ActivityFeed";
 import { RollControls } from "@/components/match/RollControls";
 import { ScorecardGrid } from "@/components/scorecard/ScorecardGrid";
@@ -13,6 +14,11 @@ import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
 import { useMatchStore } from "@/lib/store/useMatchStore";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
 import { getProfiles, type Profile } from "@/lib/supabase/profiles";
+
+// A little longer than the dice's own longest possible roll animation
+// (see ROLL_MAX_DURATION_S in Die.tsx), so the scorecard preview never
+// reveals a result before the dice visually finish tumbling.
+const DICE_SETTLE_DELAY_MS = ROLL_MAX_DURATION_S * 1000 + 60;
 
 export default function MatchPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -35,13 +41,27 @@ export default function MatchPage() {
   const events = useActivityFeed(match?.id);
   const [handoffAcknowledged, setHandoffAcknowledged] = useState(false);
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, Profile>>({});
+  const [diceSettled, setDiceSettled] = useState(true);
+  const [trackedRollCount, setTrackedRollCount] = useState(turn.rollsUsedThisTurn);
 
   const turnKey = match ? `${match.currentPlayerIndex}:${match.currentTurnNumber}` : undefined;
   const [trackedTurnKey, setTrackedTurnKey] = useState(turnKey);
   if (turnKey !== trackedTurnKey) {
     setTrackedTurnKey(turnKey);
     setHandoffAcknowledged(false);
+    setDiceSettled(true);
   }
+
+  if (turn.rollsUsedThisTurn !== trackedRollCount) {
+    setTrackedRollCount(turn.rollsUsedThisTurn);
+    if (turn.rollsUsedThisTurn > 0) setDiceSettled(false);
+  }
+
+  useEffect(() => {
+    if (diceSettled) return;
+    const timeout = setTimeout(() => setDiceSettled(true), DICE_SETTLE_DELAY_MS);
+    return () => clearTimeout(timeout);
+  }, [diceSettled]);
 
   useEffect(() => {
     loadMatch(matchId);
@@ -161,8 +181,8 @@ export default function MatchPage() {
             profiles={profilesByUserId}
             playerOrder={match.playerIds}
             activePlayerId={activePlayerId}
-            previewDice={isLocalPlayersTurn && hasRolled ? turn.dice : undefined}
-            canScoreActivePlayer={isLocalPlayersTurn && hasRolled}
+            previewDice={isLocalPlayersTurn && hasRolled && diceSettled ? turn.dice : undefined}
+            canScoreActivePlayer={isLocalPlayersTurn && hasRolled && diceSettled}
             onScore={score}
           />
           {match.mode === "separate-devices" && (
@@ -172,7 +192,7 @@ export default function MatchPage() {
           )}
         </div>
 
-        <div className="sticky top-2 flex w-[104px] flex-none flex-col items-center gap-2 rounded-2xl border border-gold/15 bg-black/25 px-2 py-3 sm:w-[130px] sm:px-3">
+        <div className="sticky top-2 flex w-[104px] flex-none flex-col items-center gap-2 rounded-2xl border border-gold/15 bg-black/25 px-2 pt-7 pb-3 sm:w-[130px] sm:px-3 sm:pt-8">
           {isLocalPlayersTurn ? (
             <>
               <DiceColumn
@@ -186,7 +206,7 @@ export default function MatchPage() {
               <RollControls
                 rollsUsedThisTurn={turn.rollsUsedThisTurn}
                 pool={pool}
-                canRoll={engineCanRoll(turn, pool)}
+                canRoll={engineCanRoll(turn, pool) && diceSettled}
                 onRoll={roll}
               />
             </>

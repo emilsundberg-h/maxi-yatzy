@@ -24,7 +24,7 @@ export function RollControls({
         {rollsUsedThisTurn === 0
           ? "Tryck för att låsa"
           : usingBorrow
-            ? "Lånar från potten"
+            ? "Sparar från potten"
             : `${rollsLeft} kast kvar`}
       </p>
       <button
@@ -39,13 +39,13 @@ export function RollControls({
         }}
       >
         <span className="text-sm leading-none">↻</span>
-        {rollsUsedThisTurn === 0 ? "KASTA" : usingBorrow ? "LÅNAT KAST" : "KASTA IGEN"}
+        {rollsUsedThisTurn === 0 ? "KASTA" : usingBorrow ? "SPARAT KAST" : "KASTA IGEN"}
       </button>
-      <div className="flex items-center gap-1 text-[9px]">
-        <span className="text-sage">
+      <div className="flex items-center gap-1.5 text-sm">
+        <span className="font-semibold text-sage">
           {Math.min(rollsUsedThisTurn, FREE_ROLLS_PER_TURN)}/{FREE_ROLLS_PER_TURN}
         </span>
-        <span className="whitespace-nowrap rounded-full border border-gold/30 bg-gold/10 px-1 py-0.5 font-semibold text-gold-bright">
+        <span className="whitespace-nowrap rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 font-bold text-gold-bright">
           {pool}
         </span>
       </div>
