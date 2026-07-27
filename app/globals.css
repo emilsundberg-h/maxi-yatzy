@@ -36,7 +36,11 @@ html,
 body {
   min-height: 100%;
   min-height: 100dvh;
-  background: radial-gradient(
+  /* iOS standalone PWAs paint the safe-area/overscroll strip (e.g. behind the
+     home indicator) using the flat background-color, not background-image —
+     so the gradient alone leaves that strip transparent (white). */
+  background-color: #071f16;
+  background-image: radial-gradient(
     135% 95% at 50% -10%,
     #1c5d45 0%,
     #0f3a2b 46%,
