@@ -202,7 +202,7 @@ export function Die({
                 borderRadius: radius,
                 background: `linear-gradient(150deg, rgba(250,245,234,${face.shade}) 0%, rgba(236,226,205,${face.shade}) 60%, rgba(221,208,180,${face.shade}) 100%)`,
                 boxShadow:
-                  "inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)",
+                  "0 0 0 1px rgba(35,28,14,.5), inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)",
                 display: "grid",
                 gridTemplateColumns: "repeat(3,1fr)",
                 gridTemplateRows: "repeat(3,1fr)",
