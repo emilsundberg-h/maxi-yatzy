@@ -40,27 +40,12 @@ const SETTLE: Record<DieValue, { x: number; y: number }> = {
   6: { x: 0, y: 180 },
 };
 
-// A die viewed dead-on (0,0 tilt) reads as a flat square — real dice photos
-// show a slight elevated angle so the top and side edges are visible even at
-// rest. Added on top of the settle rotation, not instead of it, so the
-// correct face still reads clearly.
-const IDLE_TILT = { x: 12, y: 18 };
-
-function settleTarget(value: DieValue): { x: number; y: number } {
-  const s = SETTLE[value];
-  return { x: s.x + IDLE_TILT.x, y: s.y + IDLE_TILT.y };
-}
-
 // Smallest forward (never backward) rotation from `current` that lands on
 // `target` modulo 360 — keeps every roll spinning further in the same
 // direction instead of ever snapping back.
 function wrapForward(current: number, target: number): number {
   const remainder = (((target - current) % 360) + 360) % 360;
   return current + remainder;
-}
-
-function randomTilt(): number {
-  return Math.random() * 16 - 8;
 }
 
 function randomSpins(): number {
@@ -91,33 +76,29 @@ export function Die({
   onToggleLock,
   size = 56,
 }: DieProps) {
-  const [rotX, setRotX] = useState(() => settleTarget(value).x);
-  const [rotY, setRotY] = useState(() => settleTarget(value).y);
+  const [rotX, setRotX] = useState(() => SETTLE[value].x);
+  const [rotY, setRotY] = useState(() => SETTLE[value].y);
   const [spinning, setSpinning] = useState(false);
   const [duration, setDuration] = useState(0.7);
-  const [restTilt, setRestTilt] = useState(randomTilt);
   const [trackedRolls, setTrackedRolls] = useState(rollsUsedThisTurn);
   const [trackedLocked, setTrackedLocked] = useState(locked);
 
   if (rollsUsedThisTurn !== trackedRolls) {
     setTrackedRolls(rollsUsedThisTurn);
     if (!locked) {
-      const target = settleTarget(value);
+      const target = SETTLE[value];
       setRotX(wrapForward(rotX, target.x) + randomSpins() * 360);
       setRotY(wrapForward(rotY, target.y) + randomSpins() * 360);
       setDuration(randomDuration());
-      setRestTilt(randomTilt());
       setSpinning(true);
     }
   }
 
-  // Locking should read unmistakably: the die straightens all the way to a
-  // dead-on view (no idle 3D tilt) and picks up the gold ring, instead of
-  // staying at the same angled "raised" look as the other unlocked dice.
-  // This is a snap, not a roll — no spin animation on lock/unlock.
+  // Dice always settle dead-on (no idle 3D tilt), same as a locked die — a
+  // snap, not a roll, so no spin animation on lock/unlock.
   if (locked !== trackedLocked) {
     setTrackedLocked(locked);
-    const target = locked ? SETTLE[value] : settleTarget(value);
+    const target = SETTLE[value];
     setRotX(target.x);
     setRotY(target.y);
     setDuration(0);
@@ -133,11 +114,17 @@ export function Die({
   // Locked dice sit flush (like they've been pressed down and left); unlocked
   // interactive dice float with a bigger, softer shadow so it's visually
   // obvious they can still be picked up and tapped.
-  // The ring's spread has to clear the die's own rotated 3D footprint — the
-  // cube visually pokes a few px past its flat outer box at some angles
-  // (perspective/rotation), which otherwise paints right over a thin ring.
+  // Now that locked and unlocked dice settle into the same flat orientation,
+  // the ring is the only cue telling them apart. The front face, seen
+  // through `perspective` at translateZ(size/2), is magnified and pokes
+  // ~9% of `size` past the die's own box — the ring has to clear that
+  // before it starts, or the face just paints over it. A dark separator
+  // band keeps the gold from blending into the cream die edge, backed by a
+  // wide glow so it reads clearly even against a similarly light background.
+  const ringClear = size * 0.12;
+  const ringWidth = size * 0.05;
   const boxShadow = locked
-    ? `0 4px 10px rgba(0,0,0,.4), 0 0 0 5px ${GOLD}, 0 0 22px ${GOLD}aa`
+    ? `0 4px 10px rgba(0,0,0,.4), 0 0 0 ${ringClear}px rgba(20,15,5,.6), 0 0 0 ${ringClear + ringWidth}px ${GOLD}, 0 0 ${ringClear * 3}px ${GOLD}cc`
     : interactive
       ? "0 16px 24px rgba(0,0,0,.45), 0 4px 6px rgba(0,0,0,.25)"
       : "0 8px 14px rgba(0,0,0,.35)";
@@ -176,11 +163,10 @@ export function Die({
       className={`shrink-0 ${interactive ? "cursor-pointer" : "cursor-default opacity-95"}`}
     >
       <motion.div
-        animate={{ rotateX: rotX, rotateY: rotY, rotateZ: locked ? 0 : restTilt }}
+        animate={{ rotateX: rotX, rotateY: rotY }}
         transition={{
           rotateX: { duration, ease: [0.22, 0.61, 0.36, 1] },
           rotateY: { duration, ease: [0.22, 0.61, 0.36, 1] },
-          rotateZ: { duration: 0.3, ease: "easeOut" },
         }}
         style={{
           width: size,
@@ -202,7 +188,7 @@ export function Die({
                 borderRadius: radius,
                 background: `linear-gradient(150deg, rgba(250,245,234,${face.shade}) 0%, rgba(236,226,205,${face.shade}) 60%, rgba(221,208,180,${face.shade}) 100%)`,
                 boxShadow:
-                  "0 0 0 1px rgba(35,28,14,.5), inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)",
+                  "inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)",
                 display: "grid",
                 gridTemplateColumns: "repeat(3,1fr)",
                 gridTemplateRows: "repeat(3,1fr)",
