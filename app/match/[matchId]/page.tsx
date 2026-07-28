@@ -13,6 +13,7 @@ import { ScorecardGrid } from "@/components/scorecard/ScorecardGrid";
 import { scoreCategory } from "@/lib/domain/categories";
 import { totalScore } from "@/lib/domain/scoring";
 import { canRoll as engineCanRoll } from "@/lib/domain/turn";
+import { ALL_CATEGORY_IDS } from "@/lib/domain/types";
 import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
 import { useMatchStore } from "@/lib/store/useMatchStore";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
@@ -182,7 +183,9 @@ export default function MatchPage() {
         <h1 className="max-w-full truncate font-serif text-4xl font-semibold text-paper sm:text-5xl">
           {activePlayerName}
         </h1>
-        <p className="text-xs text-muted">Kategori {match.currentTurnNumber}/20</p>
+        <p className="text-xs text-muted">
+          Runda {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length}
+        </p>
         <button
           type="button"
           onClick={() => setHandoffAcknowledged(true)}
@@ -210,7 +213,7 @@ export default function MatchPage() {
         </Link>
         <div className="text-center">
           <div className="text-[9px] font-bold tracking-[.2em] text-gold-bright">
-            RUNDA {match.currentTurnNumber}/20 ·{" "}
+            RUNDA {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length} ·{" "}
             {isLocalPlayersTurn ? "DIN TUR" : `${activePlayerName}S TUR`}
           </div>
         </div>
