@@ -204,8 +204,8 @@ export function Die({
                   {on.has(i) && (
                     <div
                       style={{
-                        width: size * 0.15,
-                        height: size * 0.15,
+                        width: size * 0.19,
+                        height: size * 0.19,
                         borderRadius: "50%",
                         background: "#241f16",
                         boxShadow: "inset 0 -1px 1px rgba(0,0,0,.35)",

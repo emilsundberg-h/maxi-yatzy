@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -7,7 +8,9 @@ import { DiceColumn } from "@/components/dice/DiceColumn";
 import { ROLL_MAX_DURATION_S } from "@/components/dice/Die";
 import { ActivityFeed } from "@/components/match/ActivityFeed";
 import { RollControls } from "@/components/match/RollControls";
+import { WinnerModal } from "@/components/match/WinnerModal";
 import { ScorecardGrid } from "@/components/scorecard/ScorecardGrid";
+import { scoreCategory } from "@/lib/domain/categories";
 import { totalScore } from "@/lib/domain/scoring";
 import { canRoll as engineCanRoll } from "@/lib/domain/turn";
 import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
@@ -43,6 +46,10 @@ export default function MatchPage() {
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, Profile>>({});
   const [diceSettled, setDiceSettled] = useState(true);
   const [trackedRollCount, setTrackedRollCount] = useState(turn.rollsUsedThisTurn);
+  const [trackedStatus, setTrackedStatus] = useState(match?.status);
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const [trackedYatzyRoll, setTrackedYatzyRoll] = useState<string | undefined>(undefined);
 
   const turnKey = match ? `${match.currentPlayerIndex}:${match.currentTurnNumber}` : undefined;
   const [trackedTurnKey, setTrackedTurnKey] = useState(turnKey);
@@ -57,11 +64,26 @@ export default function MatchPage() {
     if (turn.rollsUsedThisTurn > 0) setDiceSettled(false);
   }
 
+  // Fires once, right when the last score of the match gets locked in —
+  // `trackedStatus !== undefined` skips the initial load of an
+  // already-finished match, which shouldn't replay the celebration.
+  if (match && match.status !== trackedStatus) {
+    const justCompleted = match.status === "completed" && trackedStatus !== undefined;
+    setTrackedStatus(match.status);
+    if (justCompleted) setShowWinnerModal(true);
+  }
+
   useEffect(() => {
     if (diceSettled) return;
     const timeout = setTimeout(() => setDiceSettled(true), DICE_SETTLE_DELAY_MS);
     return () => clearTimeout(timeout);
   }, [diceSettled]);
+
+  useEffect(() => {
+    if (!shaking) return;
+    const timeout = setTimeout(() => setShaking(false), 1000);
+    return () => clearTimeout(timeout);
+  }, [shaking]);
 
   useEffect(() => {
     loadMatch(matchId);
@@ -96,6 +118,17 @@ export default function MatchPage() {
     match.mode === "shared-device" || activePlayerId === localPlayerId;
   const hasRolled = turn.rollsUsedThisTurn > 0;
 
+  // Shakes the screen the instant a maxi yatzy shows up on the dice — before
+  // the player has even locked it in. Keyed to this specific roll so it
+  // fires once per roll rather than on every re-render while it stays true.
+  if (isLocalPlayersTurn && hasRolled && diceSettled) {
+    const rollKey = `${turnKey}:${turn.rollsUsedThisTurn}`;
+    if (rollKey !== trackedYatzyRoll) {
+      setTrackedYatzyRoll(rollKey);
+      if (scoreCategory("maxiYatzy", turn.dice) > 0) setShaking(true);
+    }
+  }
+
   if (match.status === "completed") {
     const ranked = [...matchPlayers].sort(
       (a, b) => totalScore(b.scores) - totalScore(a.scores),
@@ -103,6 +136,13 @@ export default function MatchPage() {
     const winnerId = ranked[0]?.playerId;
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center gap-6 p-4 sm:p-8">
+        {showWinnerModal && winnerId && (
+          <WinnerModal
+            winnerName={players[winnerId]?.name ?? "Spelare"}
+            winnerScore={totalScore(ranked[0].scores)}
+            onClose={() => setShowWinnerModal(false)}
+          />
+        )}
         <div className="text-[10px] font-extrabold tracking-[.24em] text-gold">
           MATCH AVSLUTAD
         </div>
@@ -156,7 +196,11 @@ export default function MatchPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 p-3">
+    <motion.div
+      className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 p-3"
+      animate={shaking ? { x: [0, -14, 14, -10, 10, -6, 6, -3, 3, 0] } : { x: 0 }}
+      transition={{ duration: 1, ease: "easeInOut" }}
+    >
       <div className="flex items-center justify-between">
         <Link
           href="/"
@@ -217,6 +261,6 @@ export default function MatchPage() {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
