@@ -49,7 +49,7 @@ export default function MatchPage() {
   const [trackedStatus, setTrackedStatus] = useState(match?.status);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [shaking, setShaking] = useState(false);
-  const [trackedYatzyRoll, setTrackedYatzyRoll] = useState<string | undefined>(undefined);
+  const [trackedDiceSettled, setTrackedDiceSettled] = useState(diceSettled);
 
   const turnKey = match ? `${match.currentPlayerIndex}:${match.currentTurnNumber}` : undefined;
   const [trackedTurnKey, setTrackedTurnKey] = useState(turnKey);
@@ -118,14 +118,14 @@ export default function MatchPage() {
     match.mode === "shared-device" || activePlayerId === localPlayerId;
   const hasRolled = turn.rollsUsedThisTurn > 0;
 
-  // Shakes the screen the instant a maxi yatzy shows up on the dice — before
-  // the player has even locked it in. Keyed to this specific roll so it
-  // fires once per roll rather than on every re-render while it stays true.
-  if (isLocalPlayersTurn && hasRolled && diceSettled) {
-    const rollKey = `${turnKey}:${turn.rollsUsedThisTurn}`;
-    if (rollKey !== trackedYatzyRoll) {
-      setTrackedYatzyRoll(rollKey);
-      if (scoreCategory("maxiYatzy", turn.dice) > 0) setShaking(true);
+  // Fires only on the render where the dice actually finish tumbling (the
+  // settle timeout flipping this from false to true) — never on the render
+  // that starts a roll, where `diceSettled` would still read its stale
+  // pre-roll value.
+  if (diceSettled !== trackedDiceSettled) {
+    setTrackedDiceSettled(diceSettled);
+    if (diceSettled && hasRolled && isLocalPlayersTurn && scoreCategory("maxiYatzy", turn.dice) > 0) {
+      setShaking(true);
     }
   }
 
