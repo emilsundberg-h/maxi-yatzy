@@ -87,6 +87,11 @@ export interface MatchPlayer {
   playerId: string;
   scores: Partial<Record<CategoryId, number>>;
   pool: number;
+  // Dice as they stood when this player's last turn ended — shown at the
+  // start of their next turn instead of a fresh [1,1,1,1,1,1], the way
+  // physical dice would just sit there on the table between turns.
+  // Undefined until they've taken a first turn.
+  lastDice?: Dice;
 }
 
 export type ActivityEventType =

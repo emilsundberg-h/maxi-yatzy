@@ -11,9 +11,12 @@ export interface TurnState {
 
 export const FREE_ROLLS_PER_TURN = 3;
 
-export function startTurn(): TurnState {
+// `seedDice` displays a player's last-turn dice at the start of their next
+// turn instead of a fresh [1,1,1,1,1,1] — purely cosmetic, since nothing is
+// locked yet, so the first roll replaces all six anyway.
+export function startTurn(seedDice?: Dice): TurnState {
   return {
-    dice: initialDice(),
+    dice: seedDice ?? initialDice(),
     locked: initialLocked(),
     rollsUsedThisTurn: 0,
     rollsBorrowedThisTurn: 0,

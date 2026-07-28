@@ -96,7 +96,11 @@ export class SupabaseMatchRepository implements MatchRepository {
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from("match_players")
-      .update({ scores: matchPlayer.scores, pool: matchPlayer.pool })
+      .update({
+        scores: matchPlayer.scores,
+        pool: matchPlayer.pool,
+        last_dice: matchPlayer.lastDice ?? null,
+      })
       .eq("match_id", matchPlayer.matchId)
       .eq("player_id", matchPlayer.playerId);
     if (error) throw error;

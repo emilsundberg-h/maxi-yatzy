@@ -39,6 +39,20 @@ describe("turn lifecycle", () => {
   it("throws when scoring before rolling", () => {
     expect(() => scoreAndEndTurn(startTurn())).toThrow();
   });
+
+  it("seeds dice from the given seed instead of the all-ones default", () => {
+    const seed: [DieValue, DieValue, DieValue, DieValue, DieValue, DieValue] = [
+      6, 5, 4, 3, 2, 1,
+    ];
+    expect(startTurn(seed).dice).toEqual(seed);
+    expect(startTurn().dice).toEqual([1, 1, 1, 1, 1, 1]);
+  });
+
+  it("a seeded turn still starts fully unlocked with zero rolls used", () => {
+    const state = startTurn([6, 6, 6, 6, 6, 6]);
+    expect(state.rollsUsedThisTurn).toBe(0);
+    expect(state.locked).toEqual([false, false, false, false, false, false]);
+  });
 });
 
 describe("saved-rolls pool — the user's example: 4 ones on roll 1, lock in early", () => {

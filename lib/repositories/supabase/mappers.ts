@@ -1,4 +1,4 @@
-import type { ActivityEvent, Match, MatchPlayer, Player } from "@/lib/domain/types";
+import type { ActivityEvent, Dice, Match, MatchPlayer, Player } from "@/lib/domain/types";
 
 // Row shapes matching supabase/migrations/0001_init.sql — kept local to the
 // mapper functions rather than generated types, since the schema is small
@@ -29,6 +29,7 @@ export interface MatchPlayerRow {
   player_id: string;
   scores: MatchPlayer["scores"];
   pool: number;
+  last_dice: number[] | null;
 }
 
 export interface ActivityRow {
@@ -71,6 +72,7 @@ export function toMatchPlayer(row: MatchPlayerRow): MatchPlayer {
     playerId: row.player_id,
     scores: row.scores ?? {},
     pool: row.pool,
+    lastDice: row.last_dice ? (row.last_dice as Dice) : undefined,
   };
 }
 
