@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { CATEGORY_LABELS, scoreCategory } from "@/lib/domain/categories";
 import { totalScore, upperBonus, upperSum } from "@/lib/domain/scoring";
 import {
@@ -55,23 +55,50 @@ export function ScorecardGrid({
   const COLUMN_WIDTH = 50;
   const gridTemplateColumns = `${LABEL_WIDTH}px repeat(${orderedPlayerIds.length}, minmax(${COLUMN_WIDTH}px, 1fr))`;
 
+  // Scoring a category takes two taps — the first just arms the cell, the
+  // second (on that same cell) actually locks it in — so a stray tap on the
+  // scorecard can't silently burn a category. A new roll changes what every
+  // preview score would be, so it clears whatever was armed.
+  const [armedCategoryId, setArmedCategoryId] = useState<CategoryId | null>(null);
+  const [trackedPreviewDice, setTrackedPreviewDice] = useState(previewDice);
+  if (previewDice !== trackedPreviewDice) {
+    setTrackedPreviewDice(previewDice);
+    setArmedCategoryId(null);
+  }
+
   function categoryCell(categoryId: CategoryId, playerId: string) {
     const mp = mpByPlayer.get(playerId)!;
     const isActiveCol = playerId === activePlayerId;
     const filled = mp.scores[categoryId];
     const clickable =
       isActiveCol && canScoreActivePlayer && filled === undefined && previewDice !== undefined;
+    const armed = clickable && armedCategoryId === categoryId;
     const preview = isActiveCol && previewDice ? scoreCategory(categoryId, previewDice) : undefined;
     const text = filled !== undefined ? filled : clickable ? preview : "·";
+
+    function handleClick() {
+      if (!clickable) return;
+      if (armed) {
+        setArmedCategoryId(null);
+        onScore?.(categoryId);
+      } else {
+        setArmedCategoryId(categoryId);
+      }
+    }
 
     return (
       <button
         key={playerId}
         type="button"
         disabled={!clickable}
-        onClick={() => clickable && onScore?.(categoryId)}
+        onClick={handleClick}
+        aria-label={armed ? `${CATEGORY_LABELS[categoryId]}: tryck igen för att låsa` : undefined}
         className={`border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
-          isActiveCol ? "bg-gold/10" : ""
+          armed
+            ? "bg-gold/45 ring-2 ring-inset ring-gold-bright"
+            : isActiveCol
+              ? "bg-gold/10"
+              : ""
         } ${
           clickable
             ? "cursor-pointer font-bold text-gold-bright italic hover:bg-gold/20"
