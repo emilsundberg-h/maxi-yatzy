@@ -113,18 +113,10 @@ export function Die({
   const half = size / 2;
   // Locked dice sit flush (like they've been pressed down and left); unlocked
   // interactive dice float with a bigger, softer shadow so it's visually
-  // obvious they can still be picked up and tapped.
-  // Now that locked and unlocked dice settle into the same flat orientation,
-  // the ring is the only cue telling them apart. The front face, seen
-  // through `perspective` at translateZ(size/2), is magnified and pokes
-  // ~9% of `size` past the die's own box — the ring has to clear that
-  // before it starts, or the face just paints over it. A dark separator
-  // band keeps the gold from blending into the cream die edge, backed by a
-  // wide glow so it reads clearly even against a similarly light background.
-  const ringClear = size * 0.12;
-  const ringWidth = size * 0.05;
+  // obvious they can still be picked up and tapped. The lock ring itself
+  // isn't drawn here — see the face loop below for why.
   const boxShadow = locked
-    ? `0 4px 10px rgba(0,0,0,.4), 0 0 0 ${ringClear}px rgba(20,15,5,.6), 0 0 0 ${ringClear + ringWidth}px ${GOLD}, 0 0 ${ringClear * 3}px ${GOLD}cc`
+    ? "0 4px 10px rgba(0,0,0,.4)"
     : interactive
       ? "0 16px 24px rgba(0,0,0,.45), 0 4px 6px rgba(0,0,0,.25)"
       : "0 8px 14px rgba(0,0,0,.35)";
@@ -177,6 +169,17 @@ export function Die({
       >
         {FACES.map((face) => {
           const on = new Set(PIP_MAPS[face.value]);
+          // The lock ring is drawn on the settled face itself, not the flat
+          // outer button — perspective + translateZ magnifies the face by a
+          // fixed ratio (independent of `size`, but not identical across
+          // browser engines), so a ring sized on the button can't reliably
+          // hug it: too tight and the face paints over it, too loose and a
+          // gap opens at the rounded corners. Attached to the face, the ring
+          // is magnified right along with it and always lines up exactly.
+          const lockRing =
+            locked && face.value === value
+              ? `, 0 0 0 ${size * 0.03}px rgba(20,15,5,.6), 0 0 0 ${size * 0.08}px ${GOLD}, 0 0 ${size * 0.3}px ${GOLD}cc`
+              : "";
           return (
             <div
               key={face.value}
@@ -187,8 +190,7 @@ export function Die({
                 backfaceVisibility: "hidden",
                 borderRadius: radius,
                 background: `linear-gradient(150deg, rgba(250,245,234,${face.shade}) 0%, rgba(236,226,205,${face.shade}) 60%, rgba(221,208,180,${face.shade}) 100%)`,
-                boxShadow:
-                  "inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)",
+                boxShadow: `inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)${lockRing}`,
                 display: "grid",
                 gridTemplateColumns: "repeat(3,1fr)",
                 gridTemplateRows: "repeat(3,1fr)",
