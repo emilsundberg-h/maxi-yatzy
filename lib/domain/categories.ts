@@ -116,9 +116,9 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
   smallStraight: "Liten stege",
   largeStraight: "Stor stege",
   fullStraight: "Full stege",
-  kak: "Kåk",
-  villa: "Villa",
-  torn: "Torn",
+  kak: "Kåk (3+2)",
+  villa: "Villa (3+3)",
+  torn: "Torn (4+2)",
   chance: "Chans",
   maxiYatzy: "Maxi Yatzy",
 };
