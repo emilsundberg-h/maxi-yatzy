@@ -200,69 +200,62 @@ export default function MatchPage() {
 
   return (
     <motion.div
-      className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 p-3"
+      className="mx-auto flex w-full max-w-6xl flex-1 items-start gap-2 p-2"
       animate={shaking ? { x: [0, -14, 14, -10, 10, -6, 6, -3, 3, 0] } : { x: 0 }}
       transition={{ duration: 1, ease: "easeInOut" }}
     >
-      <div className="flex items-center justify-between">
+      <div className="min-w-0 flex-1">
+        <ScorecardGrid
+          matchPlayers={matchPlayers}
+          players={players}
+          profiles={profilesByUserId}
+          playerOrder={match.playerIds}
+          activePlayerId={activePlayerId}
+          previewDice={isLocalPlayersTurn && hasRolled && diceSettled ? turn.dice : undefined}
+          canScoreActivePlayer={isLocalPlayersTurn && hasRolled && diceSettled}
+          onScore={score}
+        />
+        {match.mode === "separate-devices" && (
+          <div className="mt-4">
+            <ActivityFeed events={events} players={players} />
+          </div>
+        )}
+      </div>
+
+      <div className="sticky top-2 flex w-[112px] flex-none flex-col items-center gap-3 rounded-2xl border border-gold/15 bg-black/25 px-2 pt-2 pb-3 sm:w-[140px] sm:px-3">
         <Link
           href="/"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-gold/25 bg-white/5 text-sm text-gold-bright"
+          className="flex h-7 w-7 shrink-0 items-center justify-center self-start rounded-full border border-gold/25 bg-white/5 text-sm text-gold-bright"
         >
           ‹
         </Link>
-        <div className="text-center">
-          <div className="text-[9px] font-bold tracking-[.2em] text-gold-bright">
-            RUNDA {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length} ·{" "}
-            {isLocalPlayersTurn ? "DIN TUR" : `${activePlayerName}S TUR`}
-          </div>
+        <div className="text-center text-[9px] font-bold leading-tight tracking-[.15em] text-gold-bright">
+          RUNDA {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length}
+          <br />
+          {isLocalPlayersTurn ? "DIN TUR" : `${activePlayerName}S TUR`}
         </div>
-        <div className="w-7" />
-      </div>
-
-      <div className="flex items-start gap-2.5">
-        <div className="min-w-0 flex-1">
-          <ScorecardGrid
-            matchPlayers={matchPlayers}
-            players={players}
-            profiles={profilesByUserId}
-            playerOrder={match.playerIds}
-            activePlayerId={activePlayerId}
-            previewDice={isLocalPlayersTurn && hasRolled && diceSettled ? turn.dice : undefined}
-            canScoreActivePlayer={isLocalPlayersTurn && hasRolled && diceSettled}
-            onScore={score}
-          />
-          {match.mode === "separate-devices" && (
-            <div className="mt-4">
-              <ActivityFeed events={events} players={players} />
-            </div>
-          )}
-        </div>
-
-        <div className="sticky top-2 flex w-[104px] flex-none flex-col items-center gap-2 rounded-2xl border border-gold/15 bg-black/25 px-2 pt-7 pb-3 sm:w-[130px] sm:px-3 sm:pt-8">
-          {isLocalPlayersTurn ? (
-            <>
-              <DiceColumn
-                dice={turn.dice}
-                locked={turn.locked}
-                rollsUsedThisTurn={turn.rollsUsedThisTurn}
-                interactive
-                onToggleLock={toggleLock}
-                size={40}
-              />
-              <RollControls
-                rollsUsedThisTurn={turn.rollsUsedThisTurn}
-                pool={pool}
-                canRoll={engineCanRoll(turn, pool) && diceSettled}
-                onRoll={roll}
-              />
-            </>
-          ) : (
-            <p className="py-4 text-center text-[11px] text-paper-dim">
-              Väntar på {activePlayerName}…
-            </p>
-          )}
-        </div>
+        {isLocalPlayersTurn ? (
+          <>
+            <DiceColumn
+              dice={turn.dice}
+              locked={turn.locked}
+              rollsUsedThisTurn={turn.rollsUsedThisTurn}
+              interactive
+              onToggleLock={toggleLock}
+              size={46}
+            />
+            <RollControls
+              rollsUsedThisTurn={turn.rollsUsedThisTurn}
+              pool={pool}
+              canRoll={engineCanRoll(turn, pool) && diceSettled}
+              onRoll={roll}
+            />
+          </>
+        ) : (
+          <p className="py-4 text-center text-[11px] text-paper-dim">
+            Väntar på {activePlayerName}…
+          </p>
+        )}
       </div>
     </motion.div>
   );

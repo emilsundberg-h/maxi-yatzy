@@ -101,13 +101,28 @@ export function ScorecardGrid({
               : ""
         } ${
           clickable
-            ? "cursor-pointer font-bold text-gold-bright italic hover:bg-gold/20"
+            ? "cursor-pointer hover:bg-gold/10"
             : filled !== undefined
               ? "font-semibold text-paper"
               : "cursor-default text-[#5d6b62]"
         }`}
       >
-        {text}
+        {clickable ? (
+          // The label: a little tag marking "this is what you'd score here",
+          // colored to signal outcome at a glance — gold for points, a dull
+          // red for a category that would score zero right now.
+          <span
+            className={`inline-flex min-w-[1.9em] items-center justify-center rounded-md px-1.5 py-0.5 text-[12px] font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] ${
+              (preview ?? 0) > 0
+                ? "bg-gradient-to-br from-[#eecb7c] to-[#b98d38] text-[#241708]"
+                : "bg-[#5c2a2a] text-[#e8b9b9]"
+            }`}
+          >
+            {text}
+          </span>
+        ) : (
+          text
+        )}
       </button>
     );
   }

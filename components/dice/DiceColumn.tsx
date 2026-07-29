@@ -21,7 +21,7 @@ export function DiceColumn({
   size = 56,
 }: DiceColumnProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-6">
+    <div className="flex flex-col items-center justify-center gap-8">
       {dice.map((value, i) => (
         <Die
           key={i}
