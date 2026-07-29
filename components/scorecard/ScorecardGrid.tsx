@@ -94,11 +94,7 @@ export function ScorecardGrid({
         onClick={handleClick}
         aria-label={armed ? `${CATEGORY_LABELS[categoryId]}: tryck igen för att låsa` : undefined}
         className={`border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
-          armed
-            ? "bg-gold/45 ring-2 ring-inset ring-gold-bright"
-            : isActiveCol
-              ? "bg-gold/10"
-              : ""
+          isActiveCol ? "bg-gold/10" : ""
         } ${
           clickable
             ? "cursor-pointer hover:bg-gold/10"
@@ -110,9 +106,14 @@ export function ScorecardGrid({
         {clickable ? (
           // The label: a little tag marking "this is what you'd score here",
           // colored to signal outcome at a glance — gold for points, a dull
-          // red for a category that would score zero right now.
+          // red for a category that would score zero right now. Arming it
+          // (first tap) just grows the tag itself rather than filling the
+          // whole cell gold, so the "tap again to confirm" cue stays with
+          // the number instead of taking over the row.
           <span
-            className={`inline-flex min-w-[1.9em] items-center justify-center rounded-md px-1.5 py-0.5 text-[12px] font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] ${
+            className={`inline-flex min-w-[1.9em] items-center justify-center rounded-md px-1.5 py-0.5 text-[12px] font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+              armed ? "scale-125 ring-2 ring-white/80" : "scale-100"
+            } ${
               (preview ?? 0) > 0
                 ? "bg-gradient-to-br from-[#eecb7c] to-[#b98d38] text-[#241708]"
                 : "bg-[#5c2a2a] text-[#e8b9b9]"
