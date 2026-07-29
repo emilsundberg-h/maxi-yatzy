@@ -75,6 +75,12 @@ function makeFakeRepos(): Repositories & {
           lastDice: match.lastDice,
         });
       },
+      async deleteMatch(id: string) {
+        matchesById.delete(id);
+        for (const mp of [...matchPlayersByKey.values()]) {
+          if (mp.matchId === id) matchPlayersByKey.delete(key(mp.matchId, mp.playerId));
+        }
+      },
       async getMatchPlayer(matchId: string, playerId: string) {
         return matchPlayersByKey.get(key(matchId, playerId));
       },

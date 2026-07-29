@@ -19,6 +19,8 @@ export interface MatchRepository {
   getMatch(id: string): Promise<Match | undefined>;
   listMatches(filter?: { status?: MatchStatus }): Promise<Match[]>;
   updateMatch(match: Match): Promise<void>;
+  /** Permanently removes the match and its players/activity (cascades). */
+  deleteMatch(id: string): Promise<void>;
   getMatchPlayer(
     matchId: string,
     playerId: string,

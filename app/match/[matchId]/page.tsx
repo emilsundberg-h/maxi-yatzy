@@ -11,7 +11,7 @@ import { RollControls } from "@/components/match/RollControls";
 import { WinnerModal } from "@/components/match/WinnerModal";
 import { ScorecardGrid } from "@/components/scorecard/ScorecardGrid";
 import { scoreCategory } from "@/lib/domain/categories";
-import { totalScore } from "@/lib/domain/scoring";
+import { matchWinnerId, totalScore } from "@/lib/domain/scoring";
 import { canRoll as engineCanRoll } from "@/lib/domain/turn";
 import { ALL_CATEGORY_IDS } from "@/lib/domain/types";
 import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
@@ -134,13 +134,14 @@ export default function MatchPage() {
     const ranked = [...matchPlayers].sort(
       (a, b) => totalScore(b.scores) - totalScore(a.scores),
     );
-    const winnerId = ranked[0]?.playerId;
+    const winnerId = matchWinnerId(matchPlayers, match.forfeitedByPlayerId);
+    const winner = matchPlayers.find((mp) => mp.playerId === winnerId);
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center gap-6 p-4 sm:p-8">
-        {showWinnerModal && winnerId && (
+        {showWinnerModal && winnerId && winner && (
           <WinnerModal
             winnerName={players[winnerId]?.name ?? "Spelare"}
-            winnerScore={totalScore(ranked[0].scores)}
+            winnerScore={totalScore(winner.scores)}
             onClose={() => setShowWinnerModal(false)}
           />
         )}
@@ -150,9 +151,14 @@ export default function MatchPage() {
         <h1 className="max-w-full truncate px-4 text-center font-serif text-4xl font-semibold text-paper">
           {winnerId ? `${players[winnerId]?.name ?? "–"} vann!` : "Match klar"}
         </h1>
-        {winnerId && (
+        {winnerId && winner && (
           <p className="text-sm text-paper-dim">
-            med {totalScore(ranked[0].scores)} poäng
+            med {totalScore(winner.scores)} poäng
+          </p>
+        )}
+        {match.forfeitedByPlayerId && (
+          <p className="text-xs text-muted-dim">
+            {players[match.forfeitedByPlayerId]?.name ?? "Spelaren"} gav upp matchen.
           </p>
         )}
         <div className="w-full">

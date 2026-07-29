@@ -86,6 +86,10 @@ export interface Match {
   // is picks up however the previous player left them, not their own
   // dice from turns ago. Undefined until the match's first turn ends.
   lastDice?: Dice;
+  // Set when someone swipes the match away to give up rather than playing
+  // it out — that player forfeits and can never be the winner shown for
+  // this match, even if their score was highest at the time.
+  forfeitedByPlayerId?: string;
 }
 
 export interface MatchPlayer {

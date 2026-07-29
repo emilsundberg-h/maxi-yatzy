@@ -23,6 +23,7 @@ export interface MatchRow {
   updated_at: string;
   completed_at: string | null;
   last_dice: number[] | null;
+  forfeited_by_player_id: string | null;
 }
 
 export interface MatchPlayerRow {
@@ -64,6 +65,7 @@ export function toMatch(row: MatchRow): Match {
     updatedAt: row.updated_at,
     completedAt: row.completed_at ?? undefined,
     lastDice: row.last_dice ? (row.last_dice as Dice) : undefined,
+    forfeitedByPlayerId: row.forfeited_by_player_id ?? undefined,
   };
 }
 

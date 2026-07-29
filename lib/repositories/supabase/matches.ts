@@ -65,8 +65,15 @@ export class SupabaseMatchRepository implements MatchRepository {
         updated_at: new Date().toISOString(),
         completed_at: match.completedAt ?? null,
         last_dice: match.lastDice ?? null,
+        forfeited_by_player_id: match.forfeitedByPlayerId ?? null,
       })
       .eq("id", match.id);
+    if (error) throw error;
+  }
+
+  async deleteMatch(id: string): Promise<void> {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.from("matches").delete().eq("id", id);
     if (error) throw error;
   }
 

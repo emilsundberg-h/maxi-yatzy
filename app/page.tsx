@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { ForfeitMatchModal } from "@/components/dashboard/ForfeitMatchModal";
 import { MatchCard } from "@/components/dashboard/MatchCard";
+import { isAdminEmail } from "@/lib/domain/admin";
 import type { Match, MatchPlayer, Player } from "@/lib/domain/types";
 import { getRepositories } from "@/lib/repositories";
 import { getProfiles, type Profile } from "@/lib/supabase/profiles";
@@ -11,7 +13,11 @@ import { usePlayersStore } from "@/lib/store/usePlayersStore";
 
 export default function DashboardPage() {
   const authLoading = useAuthStore((s) => s.loading);
+  const currentUser = useAuthStore((s) => s.user);
+  const isAdmin = isAdminEmail(currentUser?.email);
   const { players, localPlayerId, load, loaded } = usePlayersStore();
+  const [pendingDeleteMatch, setPendingDeleteMatch] = useState<Match | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchPlayersByMatch, setMatchPlayersByMatch] = useState<
     Record<string, MatchPlayer[]>
@@ -73,6 +79,46 @@ export default function DashboardPage() {
     ...Object.fromEntries(players.map((p) => [p.id, p])),
   };
 
+  async function handleForfeit() {
+    const match = pendingDeleteMatch;
+    if (!match) return;
+    setPendingDeleteMatch(null);
+    setDeleteError(null);
+    // Whoever's device/account this is takes the loss. Falls back to the
+    // first player if this device isn't one of the match's participants
+    // (shouldn't normally happen — the dashboard only ever lists matches
+    // this account owns or is invited to).
+    const forfeitingPlayerId =
+      localPlayerId && match.playerIds.includes(localPlayerId)
+        ? localPlayerId
+        : match.playerIds[0];
+    const nextMatch: Match = {
+      ...match,
+      status: "completed",
+      completedAt: new Date().toISOString(),
+      forfeitedByPlayerId: forfeitingPlayerId,
+    };
+    try {
+      await getRepositories().matches.updateMatch(nextMatch);
+      setMatches((prev) => prev.map((m) => (m.id === match.id ? nextMatch : m)));
+    } catch {
+      setDeleteError("Kunde inte avsluta matchen. Försök igen.");
+    }
+  }
+
+  async function handleCleanup() {
+    const match = pendingDeleteMatch;
+    if (!match) return;
+    setPendingDeleteMatch(null);
+    setDeleteError(null);
+    try {
+      await getRepositories().matches.deleteMatch(match.id);
+      setMatches((prev) => prev.filter((m) => m.id !== match.id));
+    } catch {
+      setDeleteError("Kunde inte ta bort matchen — du äger den kanske inte.");
+    }
+  }
+
   if (authLoading || !loaded) {
     return (
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
@@ -89,6 +135,14 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4 pt-8">
+      {pendingDeleteMatch && (
+        <ForfeitMatchModal
+          isAdmin={isAdmin}
+          onCancel={() => setPendingDeleteMatch(null)}
+          onForfeit={handleForfeit}
+          onCleanup={handleCleanup}
+        />
+      )}
       <div className="flex items-end justify-between">
         <div>
           <div className="text-[10px] font-extrabold tracking-[.28em] text-gold">
@@ -112,6 +166,8 @@ export default function DashboardPage() {
         </nav>
       </div>
 
+      {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
+
       <Link
         href="/match/new"
         className="rounded-2xl px-6 py-3.5 text-center font-extrabold tracking-[.06em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
@@ -133,6 +189,7 @@ export default function DashboardPage() {
               players={playersById}
               profiles={profilesByUserId}
               localPlayerId={localPlayerId}
+              onSwipeDelete={() => setPendingDeleteMatch(m)}
             />
           ))}
           {inProgress.length === 0 && (

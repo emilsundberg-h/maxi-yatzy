@@ -58,6 +58,19 @@ export class IndexedDbMatchRepository implements MatchRepository {
     await db.put("matches", { ...match, updatedAt: new Date().toISOString() });
   }
 
+  async deleteMatch(id: string): Promise<void> {
+    const db = await getDb();
+    const tx = db.transaction(["matches", "matchPlayers", "activity"], "readwrite");
+    await tx.objectStore("matches").delete(id);
+    const matchPlayersStore = tx.objectStore("matchPlayers");
+    const playerKeys = await matchPlayersStore.index("by-matchId").getAllKeys(id);
+    await Promise.all(playerKeys.map((key) => matchPlayersStore.delete(key)));
+    const activityStore = tx.objectStore("activity");
+    const activityKeys = await activityStore.index("by-matchId").getAllKeys(id);
+    await Promise.all(activityKeys.map((key) => activityStore.delete(key)));
+    await tx.done;
+  }
+
   async getMatchPlayer(
     matchId: string,
     playerId: string,

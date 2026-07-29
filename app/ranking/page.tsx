@@ -37,17 +37,23 @@ export default function RankingPage() {
 
       for (const match of matches) {
         const mps = await repos.matches.listMatchPlayers(match.id);
-        let topScore = -Infinity;
+        // Whoever forfeited is excluded from winning this match (even on a
+        // tied or highest score) but their actual score still counts
+        // toward personal-best / all-time-high stats below.
+        const eligible = match.forfeitedByPlayerId
+          ? mps.filter((mp) => mp.playerId !== match.forfeitedByPlayerId)
+          : mps;
+        const contenders = eligible.length > 0 ? eligible : mps;
+        const topScore = Math.max(...contenders.map((mp) => totalScore(mp.scores)));
         for (const mp of mps) {
           const s = totalScore(mp.scores);
-          if (s > topScore) topScore = s;
           bestByPlayer[mp.playerId] = Math.max(bestByPlayer[mp.playerId] ?? 0, s);
           if (!best || s > best.score) best = { playerId: mp.playerId, score: s };
           if (localPlayerId && mp.playerId === localPlayerId) {
             myBest = myBest === undefined ? s : Math.max(myBest, s);
           }
         }
-        for (const mp of mps) {
+        for (const mp of contenders) {
           if (totalScore(mp.scores) === topScore) {
             winsByPlayer[mp.playerId] = (winsByPlayer[mp.playerId] ?? 0) + 1;
           }

@@ -80,6 +80,42 @@ describe("IndexedDbMatchRepository", () => {
     expect(await matches.listMatches({ status: "completed" })).toHaveLength(1);
     expect(await matches.listMatches()).toHaveLength(2);
   });
+
+  it("deleteMatch removes the match, its players, and its activity — and nothing from an unrelated match", async () => {
+    const players = new IndexedDbPlayerRepository();
+    const matches = new IndexedDbMatchRepository();
+    const activity = new IndexedDbActivityRepository();
+    const anna = await players.createPlayer("Anna");
+    const bo = await players.createPlayer("Bo");
+
+    const target = await matches.createMatch("shared-device", [anna.id, bo.id]);
+    await activity.append({
+      matchId: target.id,
+      playerId: anna.id,
+      turnNumber: 1,
+      type: "turn_started",
+      payload: null,
+    });
+    const other = await matches.createMatch("shared-device", [anna.id]);
+    await activity.append({
+      matchId: other.id,
+      playerId: anna.id,
+      turnNumber: 1,
+      type: "turn_started",
+      payload: null,
+    });
+
+    await matches.deleteMatch(target.id);
+
+    expect(await matches.getMatch(target.id)).toBeUndefined();
+    expect(await matches.listMatchPlayers(target.id)).toEqual([]);
+    expect(await activity.listByMatch(target.id)).toEqual([]);
+
+    // The unrelated match is untouched.
+    expect(await matches.getMatch(other.id)).toBeDefined();
+    expect(await matches.listMatchPlayers(other.id)).toHaveLength(1);
+    expect(await activity.listByMatch(other.id)).toHaveLength(1);
+  });
 });
 
 describe("IndexedDbActivityRepository", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isScoreSheetComplete, totalScore, upperBonus, upperSum } from "./scoring";
+import { isScoreSheetComplete, matchWinnerId, totalScore, upperBonus, upperSum } from "./scoring";
 import { ALL_CATEGORY_IDS } from "./types";
 import type { ScoreSheet } from "./scoring";
 
@@ -56,5 +56,25 @@ describe("isScoreSheetComplete", () => {
     const full: ScoreSheet = {};
     for (const id of ALL_CATEGORY_IDS) full[id] = 0;
     expect(isScoreSheetComplete(full)).toBe(true);
+  });
+});
+
+describe("matchWinnerId", () => {
+  const players = [
+    { playerId: "p1", scores: { chance: 10 } },
+    { playerId: "p2", scores: { chance: 25 } },
+    { playerId: "p3", scores: { chance: 15 } },
+  ];
+
+  it("picks the highest score when nobody forfeited", () => {
+    expect(matchWinnerId(players)).toBe("p2");
+  });
+
+  it("excludes the forfeiting player even if their score is highest", () => {
+    expect(matchWinnerId(players, "p2")).toBe("p3");
+  });
+
+  it("still returns someone if the forfeiter is the only player", () => {
+    expect(matchWinnerId([players[0]], "p1")).toBe("p1");
   });
 });
