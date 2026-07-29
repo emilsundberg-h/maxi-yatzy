@@ -9,6 +9,7 @@ interface PlayersStoreState {
   loaded: boolean;
   load: () => Promise<void>;
   createPlayer: (name: string) => Promise<Player>;
+  renamePlayer: (playerId: string, name: string) => Promise<void>;
   setLocalPlayerId: (id: string) => Promise<void>;
   setPlayerAvatar: (playerId: string, avatarUrl: string) => void;
 }
@@ -35,6 +36,14 @@ export const usePlayersStore = create<PlayersStoreState>((set, get) => ({
     const player = await repos.players.createPlayer(name);
     set({ players: [...get().players, player] });
     return player;
+  },
+
+  async renamePlayer(playerId: string, name: string) {
+    const repos = getRepositories();
+    await repos.players.renamePlayer(playerId, name);
+    set({
+      players: get().players.map((p) => (p.id === playerId ? { ...p, name } : p)),
+    });
   },
 
   async setLocalPlayerId(id: string) {

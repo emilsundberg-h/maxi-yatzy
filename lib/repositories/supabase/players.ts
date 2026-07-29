@@ -40,4 +40,10 @@ export class SupabasePlayerRepository implements PlayerRepository {
     if (error) throw error;
     return (data ?? []).map(toPlayer);
   }
+
+  async renamePlayer(id: string, name: string): Promise<void> {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.from("players").update({ name }).eq("id", id);
+    if (error) throw error;
+  }
 }

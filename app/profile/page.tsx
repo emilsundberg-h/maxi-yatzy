@@ -14,6 +14,7 @@ import {
 } from "@/lib/push";
 import { getProfile, updateUsername, type Profile } from "@/lib/supabase/profiles";
 import { useAuthStore } from "@/lib/store/useAuthStore";
+import { usePlayersStore } from "@/lib/store/usePlayersStore";
 
 function initials(text: string): string {
   return text.trim().slice(0, 2).toUpperCase() || "?";
@@ -21,6 +22,7 @@ function initials(text: string): string {
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
+  const { players, load: loadPlayers, renamePlayer } = usePlayersStore();
   const [profile, setProfile] = useState<Profile | undefined>();
   const [username, setUsername] = useState("");
   const [savingUsername, setSavingUsername] = useState(false);
@@ -55,6 +57,10 @@ export default function ProfilePage() {
     isSubscribed().then(setPushSubscribed);
   }, []);
 
+  useEffect(() => {
+    loadPlayers();
+  }, [loadPlayers]);
+
   async function handleSaveUsername() {
     if (!user) return;
     const trimmed = username.trim();
@@ -64,6 +70,13 @@ export default function ProfilePage() {
     try {
       await updateUsername(user.id, trimmed);
       setProfile((p) => (p ? { ...p, username: trimmed } : p));
+      // The name shown in matches/scorecards comes from the player's own
+      // `players` row (linked to this account), not `profiles.username` —
+      // keep it in sync so the new name actually shows up in-game.
+      const selfPlayer = players.find((p) => p.linkedUserId === user.id);
+      if (selfPlayer && selfPlayer.name !== trimmed) {
+        await renamePlayer(selfPlayer.id, trimmed);
+      }
     } catch (err) {
       setUsernameError(
         err instanceof Error && err.message.includes("duplicate")

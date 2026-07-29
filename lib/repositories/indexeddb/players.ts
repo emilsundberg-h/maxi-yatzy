@@ -25,4 +25,11 @@ export class IndexedDbPlayerRepository implements PlayerRepository {
     const db = await getDb();
     return db.getAll("players");
   }
+
+  async renamePlayer(id: string, name: string): Promise<void> {
+    const db = await getDb();
+    const player = await db.get("players", id);
+    if (!player) return;
+    await db.put("players", { ...player, name });
+  }
 }

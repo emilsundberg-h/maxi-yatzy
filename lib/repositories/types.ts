@@ -11,6 +11,7 @@ export interface PlayerRepository {
   createPlayer(name: string): Promise<Player>;
   getPlayer(id: string): Promise<Player | undefined>;
   listPlayers(): Promise<Player[]>;
+  renamePlayer(id: string, name: string): Promise<void>;
 }
 
 export interface MatchRepository {
