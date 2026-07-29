@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, useAnimation, type PanInfo } from "framer-motion";
+import { animate, motion, useMotionValue } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { matchWinnerId, totalScore } from "@/lib/domain/scoring";
 import type { Match, MatchPlayer, Player } from "@/lib/domain/types";
 import { ALL_CATEGORY_IDS } from "@/lib/domain/types";
@@ -21,9 +21,9 @@ function initials(name: string): string {
   return name.trim().slice(0, 2).toUpperCase() || "?";
 }
 
-// Dragged left past this (px) and released counts as a swipe-to-delete;
-// short of that, the card just springs back and a tap still navigates.
-const SWIPE_THRESHOLD = -70;
+// Width (px) of the revealed "TA BORT" button — also how far the card can
+// be dragged, so a full drag lands exactly on the fully-revealed position.
+const REVEAL_WIDTH = 96;
 
 export function MatchCard({
   match,
@@ -34,7 +34,8 @@ export function MatchCard({
   onSwipeDelete,
 }: MatchCardProps) {
   const router = useRouter();
-  const controls = useAnimation();
+  const x = useMotionValue(0);
+  const [open, setOpen] = useState(false);
   // Drag only ever fires past framer-motion's own movement threshold, so a
   // plain tap never sets this — used to swallow the click a real drag's
   // pointerup would otherwise also fire.
@@ -49,38 +50,61 @@ export function MatchCard({
     (match.mode === "shared-device" || activePlayerId === localPlayerId);
   const progress = Math.min(1, (match.currentTurnNumber - 1) / ALL_CATEGORY_IDS.length);
 
-  function handleDragEnd(_: unknown, info: PanInfo) {
-    void controls.start({ x: 0 });
-    if (info.offset.x < SWIPE_THRESHOLD) onSwipeDelete?.();
+  // Swiping only ever reveals the "TA BORT" button — it never deletes
+  // anything by itself. Snaps to whichever of the two resting positions
+  // (closed at 0, open at -REVEAL_WIDTH) the drag ended closer to.
+  function snapTo(target: number) {
+    animate(x, target, { type: "spring", stiffness: 500, damping: 42 });
+    setOpen(target !== 0);
+  }
+
+  function handleDragEnd() {
+    snapTo(x.get() < -REVEAL_WIDTH / 2 ? -REVEAL_WIDTH : 0);
+  }
+
+  function handleCardClick() {
+    if (wasDragged.current) {
+      wasDragged.current = false;
+      return;
+    }
+    if (open) {
+      snapTo(0);
+      return;
+    }
+    router.push(`/match/${match.id}`);
+  }
+
+  function handleDeleteClick() {
+    snapTo(0);
+    onSwipeDelete?.();
   }
 
   return (
     <div className="relative overflow-hidden rounded-[18px]">
       {onSwipeDelete && (
-        <div className="absolute inset-0 flex items-center justify-end bg-red-600 pr-6">
-          <span className="text-sm font-extrabold tracking-[.08em] text-white">TA BORT</span>
-        </div>
+        <button
+          type="button"
+          onClick={handleDeleteClick}
+          className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-600"
+          style={{ width: REVEAL_WIDTH }}
+        >
+          <span className="text-sm font-extrabold tracking-[.06em] text-white">TA BORT</span>
+        </button>
       )}
       <motion.div
         drag={onSwipeDelete ? "x" : false}
         dragDirectionLock
-        dragConstraints={{ left: -110, right: 0 }}
+        dragConstraints={{ left: -REVEAL_WIDTH, right: 0 }}
         dragElastic={0.06}
         dragMomentum={false}
-        animate={controls}
         onDragStart={() => {
           wasDragged.current = true;
         }}
         onDragEnd={handleDragEnd}
-        onClick={() => {
-          if (wasDragged.current) {
-            wasDragged.current = false;
-            return;
-          }
-          router.push(`/match/${match.id}`);
-        }}
+        onClick={handleCardClick}
         className="relative block cursor-pointer overflow-hidden rounded-[18px] border p-4 pl-5 transition-colors"
         style={{
+          x,
           touchAction: "pan-y",
           borderColor: isCompleted
             ? "rgba(255,255,255,.07)"
