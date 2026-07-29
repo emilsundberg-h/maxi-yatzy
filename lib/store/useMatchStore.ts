@@ -13,6 +13,7 @@ import type { CategoryId, Match, MatchPlayer, Player } from "@/lib/domain/types"
 import { getRepositories } from "@/lib/repositories";
 import { toMatch, toMatchPlayer, type MatchPlayerRow, type MatchRow } from "@/lib/repositories/supabase/mappers";
 import { createAuthedChannel } from "@/lib/supabase/authedChannel";
+import { clearTurnStorage, loadTurnFromStorage, saveTurnToStorage } from "@/lib/store/turnStorage";
 
 interface MatchStoreState {
   match?: Match;
@@ -60,12 +61,18 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
     const players: Record<string, Player> = {};
     for (const p of playerRecords) if (p) players[p.id] = p;
 
+    const stored = loadTurnFromStorage(
+      match.id,
+      match.currentPlayerIndex,
+      match.currentTurnNumber,
+    );
+
     set({
       match,
       matchPlayers,
       players,
-      turn: startTurn(match.lastDice),
-      poolDeltaSoFar: 0,
+      turn: stored?.turn ?? startTurn(match.lastDice),
+      poolDeltaSoFar: stored?.poolDeltaSoFar ?? 0,
       loading: false,
     });
 
@@ -82,8 +89,7 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
 
   // Pull-to-refresh while a match is open. Deliberately not the same as
   // loadMatch: this must never clobber dice/locks/rolls the player has
-  // already made this turn but not yet scored, since there's nowhere else
-  // that in-progress roll is persisted. Only resets `turn` when the
+  // already made this turn but not yet scored. Only resets `turn` when the
   // fetched match shows the turn has genuinely moved on server-side —
   // same isNewTurn guard subscribeToMatch already uses for the same reason.
   async refreshMatch(matchId) {
@@ -105,6 +111,7 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
         state.match.currentPlayerIndex !== match.currentPlayerIndex ||
         state.match.currentTurnNumber !== match.currentTurnNumber ||
         state.match.status !== match.status;
+      if (isNewTurn) clearTurnStorage(matchId);
       return {
         match,
         matchPlayers,
@@ -134,6 +141,7 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
                 state.match.currentPlayerIndex !== incoming.currentPlayerIndex ||
                 state.match.currentTurnNumber !== incoming.currentTurnNumber ||
                 state.match.status !== incoming.status;
+              if (isNewTurn) clearTurnStorage(matchId);
               return {
                 match: incoming,
                 ...(isNewTurn
@@ -170,7 +178,15 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
     if (!engineCanRoll(turn, poolNow)) return;
 
     const { state, poolDelta } = rollTurn(turn, poolNow);
-    set({ turn: state, poolDeltaSoFar: poolDeltaSoFar + poolDelta });
+    const nextPoolDeltaSoFar = poolDeltaSoFar + poolDelta;
+    set({ turn: state, poolDeltaSoFar: nextPoolDeltaSoFar });
+    saveTurnToStorage(
+      match.id,
+      match.currentPlayerIndex,
+      match.currentTurnNumber,
+      state,
+      nextPoolDeltaSoFar,
+    );
 
     const repos = getRepositories();
     await repos.activity.append({
@@ -183,12 +199,19 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
   },
 
   toggleLock(index) {
-    const { match, turn } = get();
+    const { match, turn, poolDeltaSoFar } = get();
     if (turn.rollsUsedThisTurn === 0) return;
     const nextTurn = toggleDieLock(turn, index);
     set({ turn: nextTurn });
 
     if (match) {
+      saveTurnToStorage(
+        match.id,
+        match.currentPlayerIndex,
+        match.currentTurnNumber,
+        nextTurn,
+        poolDeltaSoFar,
+      );
       const repos = getRepositories();
       void repos.activity.append({
         matchId: match.id,
@@ -264,6 +287,7 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
       };
     }
     await repos.matches.updateMatch(nextMatch);
+    clearTurnStorage(match.id);
 
     set({
       match: nextMatch,

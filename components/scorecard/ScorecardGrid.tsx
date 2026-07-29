@@ -115,8 +115,8 @@ export function ScorecardGrid({
           // height, or every row grows the moment it's your turn and
           // shrinks back the moment it isn't.
           <span
-            className={`inline-flex min-w-[1.9em] items-center justify-center rounded-md px-1.5 py-0 text-[12px] leading-none font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
-              armed ? "scale-125 ring-2 ring-white/80" : "scale-100"
+            className={`inline-flex min-w-[1.9em] items-center justify-center rounded px-1.5 py-0 text-[12px] leading-none font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+              armed ? "scale-125" : "scale-100"
             } ${
               (preview ?? 0) > 0
                 ? "bg-gradient-to-br from-[#eecb7c] to-[#b98d38] text-[#241708]"
