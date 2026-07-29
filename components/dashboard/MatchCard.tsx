@@ -57,7 +57,7 @@ export function MatchCard({
   return (
     <div className="relative overflow-hidden rounded-[18px]">
       {onSwipeDelete && (
-        <div className="absolute inset-0 flex items-center justify-end bg-red-600/90 pr-6">
+        <div className="absolute inset-0 flex items-center justify-end bg-red-600 pr-6">
           <span className="text-sm font-extrabold tracking-[.08em] text-white">TA BORT</span>
         </div>
       )}
@@ -87,11 +87,20 @@ export function MatchCard({
             : isYourTurn
               ? "rgba(233,200,119,.28)"
               : "rgba(255,255,255,.07)",
-          background: isCompleted
-            ? "rgba(255,255,255,.02)"
-            : isYourTurn
-              ? "rgba(233,200,119,.07)"
-              : "rgba(255,255,255,.035)",
+          // The card's own tint is translucent by design (it's meant to
+          // blend with the page behind it), which let the "TA BORT" panel
+          // bleed straight through at rest once that panel sat right
+          // behind it. Painting an opaque backing (matching the page's
+          // own dark green) underneath the tint keeps the look identical
+          // against the page while actually blocking what's behind it —
+          // only the sliver the card has been dragged clear of shows red.
+          background: `${
+            isCompleted
+              ? "linear-gradient(rgba(255,255,255,.02),rgba(255,255,255,.02))"
+              : isYourTurn
+                ? "linear-gradient(rgba(233,200,119,.07),rgba(233,200,119,.07))"
+                : "linear-gradient(rgba(255,255,255,.035),rgba(255,255,255,.035))"
+          }, #071f16`,
         }}
       >
         <span
