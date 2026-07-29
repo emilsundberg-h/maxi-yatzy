@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { MatchMode } from "@/lib/domain/types";
@@ -283,11 +284,16 @@ export default function NewMatchPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 p-6 pt-8">
-      <div>
-        <div className="text-[10px] font-extrabold tracking-[.28em] text-gold">
-          MAXI YATZY
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[10px] font-extrabold tracking-[.28em] text-gold">
+            MAXI YATZY
+          </div>
+          <h1 className="font-serif text-3xl font-semibold text-paper">Ny match</h1>
         </div>
-        <h1 className="font-serif text-3xl font-semibold text-paper">Ny match</h1>
+        <Link href="/" className="text-sm text-paper-dim hover:text-gold-bright">
+          Till matcher
+        </Link>
       </div>
 
       <div>
