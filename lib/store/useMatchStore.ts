@@ -24,6 +24,7 @@ interface MatchStoreState {
   error?: string;
 
   loadMatch: (matchId: string) => Promise<void>;
+  refreshMatch: (matchId: string) => Promise<void>;
   subscribeToMatch: (matchId: string) => () => void;
   roll: () => Promise<void>;
   toggleLock: (index: number) => void;
@@ -77,6 +78,40 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
         payload: null,
       });
     }
+  },
+
+  // Pull-to-refresh while a match is open. Deliberately not the same as
+  // loadMatch: this must never clobber dice/locks/rolls the player has
+  // already made this turn but not yet scored, since there's nowhere else
+  // that in-progress roll is persisted. Only resets `turn` when the
+  // fetched match shows the turn has genuinely moved on server-side —
+  // same isNewTurn guard subscribeToMatch already uses for the same reason.
+  async refreshMatch(matchId) {
+    const repos = getRepositories();
+    const [match, matchPlayers] = await Promise.all([
+      repos.matches.getMatch(matchId),
+      repos.matches.listMatchPlayers(matchId),
+    ]);
+    if (!match) return;
+    const playerRecords = await Promise.all(
+      match.playerIds.map((id) => repos.players.getPlayer(id)),
+    );
+    const players: Record<string, Player> = {};
+    for (const p of playerRecords) if (p) players[p.id] = p;
+
+    set((state) => {
+      const isNewTurn =
+        !state.match ||
+        state.match.currentPlayerIndex !== match.currentPlayerIndex ||
+        state.match.currentTurnNumber !== match.currentTurnNumber ||
+        state.match.status !== match.status;
+      return {
+        match,
+        matchPlayers,
+        players,
+        ...(isNewTurn ? { turn: startTurn(match.lastDice), poolDeltaSoFar: 0 } : {}),
+      };
+    });
   },
 
   subscribeToMatch(matchId) {

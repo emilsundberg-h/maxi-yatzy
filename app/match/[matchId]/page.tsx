@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PullToRefreshIndicator } from "@/components/dashboard/PullToRefreshIndicator";
 import { DiceColumn } from "@/components/dice/DiceColumn";
 import { ROLL_MAX_DURATION_S } from "@/components/dice/Die";
 import { ActivityFeed } from "@/components/match/ActivityFeed";
@@ -15,6 +16,7 @@ import { matchWinnerId, totalScore } from "@/lib/domain/scoring";
 import { canRoll as engineCanRoll } from "@/lib/domain/turn";
 import { ALL_CATEGORY_IDS } from "@/lib/domain/types";
 import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
+import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { useMatchStore } from "@/lib/store/useMatchStore";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
 import { getProfiles, type Profile } from "@/lib/supabase/profiles";
@@ -35,6 +37,7 @@ export default function MatchPage() {
     loading,
     error,
     loadMatch,
+    refreshMatch,
     subscribeToMatch,
     roll,
     toggleLock,
@@ -43,6 +46,11 @@ export default function MatchPage() {
   } = useMatchStore();
   const localPlayerId = usePlayersStore((s) => s.localPlayerId);
   const events = useActivityFeed(match?.id);
+  const {
+    pullDistance,
+    refreshing: pullRefreshing,
+    threshold: pullThreshold,
+  } = usePullToRefresh(() => refreshMatch(matchId));
   const [handoffAcknowledged, setHandoffAcknowledged] = useState(false);
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, Profile>>({});
   const [diceSettled, setDiceSettled] = useState(true);
@@ -104,11 +112,37 @@ export default function MatchPage() {
     getProfiles(userIds).then(setProfilesByUserId);
   }, [players]);
 
+  // Wraps every return point so pulling down to refresh works everywhere
+  // on this page (loading/error/handoff/completed/live), not just the
+  // main scorecard view.
+  function withPullToRefresh(children: React.ReactNode) {
+    return (
+      <div className="relative flex-1">
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          refreshing={pullRefreshing}
+          threshold={pullThreshold}
+        />
+        <div
+          style={{
+            transform: `translateY(${pullRefreshing ? pullThreshold : pullDistance}px)`,
+            transition:
+              pullRefreshing || pullDistance === 0 ? "transform 200ms ease-out" : undefined,
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   if (loading || !match) {
-    return <div className="flex-1 p-8 text-center text-paper-dim">Laddar match…</div>;
+    return withPullToRefresh(
+      <div className="p-8 text-center text-paper-dim">Laddar match…</div>,
+    );
   }
   if (error) {
-    return <div className="flex-1 p-8 text-center text-red-400">{error}</div>;
+    return withPullToRefresh(<div className="p-8 text-center text-red-400">{error}</div>);
   }
 
   const activePlayerId = match.playerIds[match.currentPlayerIndex];
@@ -136,8 +170,8 @@ export default function MatchPage() {
     );
     const winnerId = matchWinnerId(matchPlayers, match.forfeitedByPlayerId);
     const winner = matchPlayers.find((mp) => mp.playerId === winnerId);
-    return (
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center gap-6 p-4 sm:p-8">
+    return withPullToRefresh(
+      <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 p-4 sm:p-8">
         {showWinnerModal && winnerId && winner && (
           <WinnerModal
             winnerName={players[winnerId]?.name ?? "Spelare"}
@@ -178,13 +212,13 @@ export default function MatchPage() {
         >
           TILL MATCHER
         </Link>
-      </div>
+      </div>,
     );
   }
 
   if (match.mode === "shared-device" && !handoffAcknowledged) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 text-center">
+    return withPullToRefresh(
+      <div className="flex flex-col items-center justify-center gap-6 p-6 text-center">
         <p className="text-[11px] font-bold tracking-[.2em] text-sage">SKICKA ENHETEN TILL</p>
         <h1 className="max-w-full truncate font-serif text-4xl font-semibold text-paper sm:text-5xl">
           {activePlayerName}
@@ -200,13 +234,13 @@ export default function MatchPage() {
         >
           JAG ÄR REDO
         </button>
-      </div>
+      </div>,
     );
   }
 
-  return (
+  return withPullToRefresh(
     <motion.div
-      className="mx-auto flex w-full max-w-6xl flex-1 items-start gap-2 p-2"
+      className="mx-auto flex w-full max-w-6xl items-start gap-2 p-2"
       animate={shaking ? { x: [0, -14, 14, -10, 10, -6, 6, -3, 3, 0] } : { x: 0 }}
       transition={{ duration: 1, ease: "easeInOut" }}
     >
@@ -263,6 +297,6 @@ export default function MatchPage() {
           </p>
         )}
       </div>
-    </motion.div>
+    </motion.div>,
   );
 }
