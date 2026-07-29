@@ -109,9 +109,13 @@ export function ScorecardGrid({
           // red for a category that would score zero right now. Arming it
           // (first tap) just grows the tag itself rather than filling the
           // whole cell gold, so the "tap again to confirm" cue stays with
-          // the number instead of taking over the row.
+          // the number instead of taking over the row. No vertical padding
+          // and leading-none: this sits inside the same py-1 button as a
+          // plain filled/placeholder cell, so it must fit that exact line
+          // height, or every row grows the moment it's your turn and
+          // shrinks back the moment it isn't.
           <span
-            className={`inline-flex min-w-[1.9em] items-center justify-center rounded-md px-1.5 py-0.5 text-[12px] font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+            className={`inline-flex min-w-[1.9em] items-center justify-center rounded-md px-1.5 py-0 text-[12px] leading-none font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
               armed ? "scale-125 ring-2 ring-white/80" : "scale-100"
             } ${
               (preview ?? 0) > 0
