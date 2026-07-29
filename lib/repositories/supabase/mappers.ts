@@ -22,6 +22,7 @@ export interface MatchRow {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  last_dice: number[] | null;
 }
 
 export interface MatchPlayerRow {
@@ -29,7 +30,6 @@ export interface MatchPlayerRow {
   player_id: string;
   scores: MatchPlayer["scores"];
   pool: number;
-  last_dice: number[] | null;
 }
 
 export interface ActivityRow {
@@ -63,6 +63,7 @@ export function toMatch(row: MatchRow): Match {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at ?? undefined,
+    lastDice: row.last_dice ? (row.last_dice as Dice) : undefined,
   };
 }
 
@@ -72,7 +73,6 @@ export function toMatchPlayer(row: MatchPlayerRow): MatchPlayer {
     playerId: row.player_id,
     scores: row.scores ?? {},
     pool: row.pool,
-    lastDice: row.last_dice ? (row.last_dice as Dice) : undefined,
   };
 }
 

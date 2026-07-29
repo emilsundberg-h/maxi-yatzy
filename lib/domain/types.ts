@@ -80,6 +80,12 @@ export interface Match {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+  // Dice as they stood when the last turn (anyone's) ended — shown at the
+  // start of the next turn instead of a fresh [1,1,1,1,1,1]. One shared
+  // set of dice on the table, same as a physical game: whoever's turn it
+  // is picks up however the previous player left them, not their own
+  // dice from turns ago. Undefined until the match's first turn ends.
+  lastDice?: Dice;
 }
 
 export interface MatchPlayer {
@@ -87,11 +93,6 @@ export interface MatchPlayer {
   playerId: string;
   scores: Partial<Record<CategoryId, number>>;
   pool: number;
-  // Dice as they stood when this player's last turn ended — shown at the
-  // start of their next turn instead of a fresh [1,1,1,1,1,1], the way
-  // physical dice would just sit there on the table between turns.
-  // Undefined until they've taken a first turn.
-  lastDice?: Dice;
 }
 
 export type ActivityEventType =

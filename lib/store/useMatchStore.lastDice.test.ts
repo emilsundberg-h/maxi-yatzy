@@ -10,8 +10,8 @@ import type { Repositories } from "@/lib/repositories/types";
 
 // An in-memory stand-in for the Supabase-backed repositories, sharing the
 // exact same contract, so the store logic under test (in particular, how
-// it seeds a player's next turn from their last-turn dice) runs unchanged
-// from production — only the persistence layer is swapped.
+// it seeds a new turn from the dice the previous turn left on the table)
+// runs unchanged from production — only the persistence layer is swapped.
 function makeFakeRepos(): Repositories & {
   matchesById: Map<string, Match>;
   matchPlayersByKey: Map<string, MatchPlayer>;
@@ -67,7 +67,13 @@ function makeFakeRepos(): Repositories & {
         );
       },
       async updateMatch(match: Match) {
-        matchesById.set(match.id, match);
+        // Mirrors the real Supabase repo: round-trip through the same
+        // fields it actually persists, so a field this repo forgets to
+        // send would make the test fail too.
+        matchesById.set(match.id, {
+          ...match,
+          lastDice: match.lastDice,
+        });
       },
       async getMatchPlayer(matchId: string, playerId: string) {
         return matchPlayersByKey.get(key(matchId, playerId));
@@ -76,14 +82,10 @@ function makeFakeRepos(): Repositories & {
         return [...matchPlayersByKey.values()].filter((mp) => mp.matchId === matchId);
       },
       async updateMatchPlayer(matchPlayer: MatchPlayer) {
-        // Mirrors the real Supabase repo: only scores/pool/last_dice are
-        // ever sent over the wire, so round-trip through that same shape
-        // rather than just storing the object as-is.
         matchPlayersByKey.set(key(matchPlayer.matchId, matchPlayer.playerId), {
           ...matchPlayer,
           scores: matchPlayer.scores,
           pool: matchPlayer.pool,
-          lastDice: matchPlayer.lastDice,
         });
       },
       async inviteByEmail() {},
@@ -111,46 +113,39 @@ vi.mock("@/lib/repositories", () => ({
   getRepositories: () => fakeRepos,
 }));
 
-describe("useMatchStore — seeding a turn's dice from the player's own last roll", () => {
+describe("useMatchStore — seeding a new turn from the shared dice on the table", () => {
   beforeEach(() => {
     fakeRepos = makeFakeRepos();
     vi.resetModules();
   });
 
-  it("shows each player's own previous roll at the start of their next turn, not [1,1,1,1,1,1]", async () => {
+  it("every turn starts showing whatever the immediately-previous turn left, regardless of whose turn it was", async () => {
     const { useMatchStore } = await import("./useMatchStore");
     const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"]);
 
     await useMatchStore.getState().loadMatch(match.id);
     expect(useMatchStore.getState().match?.currentPlayerIndex).toBe(0);
+    // Nobody has rolled yet in this match at all — fresh dice.
     expect(useMatchStore.getState().turn.dice).toEqual([1, 1, 1, 1, 1, 1]);
 
-    // Player 1 rolls and scores "onePair" (any category — the dice values
-    // are whatever the real RNG produced, we just need to remember them).
+    // Player 1 rolls and scores.
     await useMatchStore.getState().roll();
     const p1Roll = useMatchStore.getState().turn.dice;
     await useMatchStore.getState().score("onePair");
 
-    // Now it's player 2's turn — they've never played, so ones is correct.
+    // Player 2's turn — should pick up the dice exactly as player 1 left
+    // them, like a shared physical set, not a fresh [1,1,1,1,1,1].
     expect(useMatchStore.getState().match?.currentPlayerIndex).toBe(1);
-    expect(useMatchStore.getState().turn.dice).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(useMatchStore.getState().turn.dice).toEqual(p1Roll);
 
     // Player 2 rolls and scores.
     await useMatchStore.getState().roll();
     const p2Roll = useMatchStore.getState().turn.dice;
     await useMatchStore.getState().score("onePair");
 
-    // Back to player 1 — should now show player 1's OWN last roll, not ones.
+    // Player 1's turn again — should now show player 2's roll (the most
+    // recent turn), not player 1's own older roll from before.
     expect(useMatchStore.getState().match?.currentPlayerIndex).toBe(0);
-    expect(useMatchStore.getState().turn.dice).toEqual(p1Roll);
-    expect(useMatchStore.getState().turn.dice).not.toEqual([1, 1, 1, 1, 1, 1]);
-
-    // Player 1 rolls and scores again.
-    await useMatchStore.getState().roll();
-    await useMatchStore.getState().score("twoPairs");
-
-    // Player 2's turn again — should show player 2's OWN last roll.
-    expect(useMatchStore.getState().match?.currentPlayerIndex).toBe(1);
     expect(useMatchStore.getState().turn.dice).toEqual(p2Roll);
   });
 
@@ -160,10 +155,10 @@ describe("useMatchStore — seeding a turn's dice from the player's own last rol
 
     await useMatchStore.getState().loadMatch(match.id);
     await useMatchStore.getState().roll();
-    const p1Roll = useMatchStore.getState().turn.dice;
     await useMatchStore.getState().score("onePair");
     await useMatchStore.getState().roll();
-    await useMatchStore.getState().score("onePair"); // player 2's turn
+    const p2Roll = useMatchStore.getState().turn.dice;
+    await useMatchStore.getState().score("onePair"); // hands back to player 1
 
     // Simulate a brand new client (a different device/tab) loading the
     // match fresh right as it becomes player 1's turn again.
@@ -172,6 +167,6 @@ describe("useMatchStore — seeding a turn's dice from the player's own last rol
     await freshStore.getState().loadMatch(match.id);
 
     expect(freshStore.getState().match?.currentPlayerIndex).toBe(0);
-    expect(freshStore.getState().turn.dice).toEqual(p1Roll);
+    expect(freshStore.getState().turn.dice).toEqual(p2Roll);
   });
 });

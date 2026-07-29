@@ -64,6 +64,7 @@ export class SupabaseMatchRepository implements MatchRepository {
         current_turn_number: match.currentTurnNumber,
         updated_at: new Date().toISOString(),
         completed_at: match.completedAt ?? null,
+        last_dice: match.lastDice ?? null,
       })
       .eq("id", match.id);
     if (error) throw error;
@@ -99,7 +100,6 @@ export class SupabaseMatchRepository implements MatchRepository {
       .update({
         scores: matchPlayer.scores,
         pool: matchPlayer.pool,
-        last_dice: matchPlayer.lastDice ?? null,
       })
       .eq("match_id", matchPlayer.matchId)
       .eq("player_id", matchPlayer.playerId);

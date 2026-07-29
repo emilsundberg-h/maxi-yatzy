@@ -58,13 +58,12 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
     );
     const players: Record<string, Player> = {};
     for (const p of playerRecords) if (p) players[p.id] = p;
-    const activeMp = matchPlayers.find((p) => p.playerId === currentPlayerId(match));
 
     set({
       match,
       matchPlayers,
       players,
-      turn: startTurn(activeMp?.lastDice),
+      turn: startTurn(match.lastDice),
       poolDeltaSoFar: 0,
       loading: false,
     });
@@ -100,13 +99,10 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
                 state.match.currentPlayerIndex !== incoming.currentPlayerIndex ||
                 state.match.currentTurnNumber !== incoming.currentTurnNumber ||
                 state.match.status !== incoming.status;
-              const nextActiveMp = state.matchPlayers.find(
-                (p) => p.playerId === currentPlayerId(incoming),
-              );
               return {
                 match: incoming,
                 ...(isNewTurn
-                  ? { turn: startTurn(nextActiveMp?.lastDice), poolDeltaSoFar: 0 }
+                  ? { turn: startTurn(incoming.lastDice), poolDeltaSoFar: 0 }
                   : {}),
               };
             });
@@ -183,8 +179,6 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
       ...mp,
       scores: { ...mp.scores, [categoryId]: points },
       pool: mp.pool + poolDeltaSoFar + bankedGain,
-      // Their next turn starts showing these, not a fresh [1,1,1,1,1,1].
-      lastDice: turn.dice,
     };
 
     const repos = getRepositories();
@@ -213,12 +207,15 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
       isScoreSheetComplete(p.scores),
     );
 
+    // One shared set of dice on the table: whoever's turn is next picks up
+    // however this turn's dice were left, not their own dice from turns ago.
     let nextMatch: Match;
     if (allComplete) {
       nextMatch = {
         ...match,
         status: "completed",
         completedAt: new Date().toISOString(),
+        lastDice: turn.dice,
       };
     } else {
       const nextIndex = (match.currentPlayerIndex + 1) % match.playerIds.length;
@@ -228,18 +225,16 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
         ...match,
         currentPlayerIndex: nextIndex,
         currentTurnNumber: nextTurnNumber,
+        lastDice: turn.dice,
       };
     }
     await repos.matches.updateMatch(nextMatch);
 
-    const nextActiveMp = nextMatchPlayers.find(
-      (p) => p.playerId === currentPlayerId(nextMatch),
-    );
     set({
       match: nextMatch,
       matchPlayers: nextMatchPlayers,
       players,
-      turn: startTurn(nextActiveMp?.lastDice),
+      turn: startTurn(nextMatch.lastDice),
       poolDeltaSoFar: 0,
     });
 
