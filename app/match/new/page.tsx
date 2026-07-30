@@ -30,10 +30,12 @@ function avatarInitials(text: string | null): string {
 function InvitePicker({
   playerName,
   currentUserId,
+  initialProfile,
   onChange,
 }: {
   playerName: string;
   currentUserId?: string;
+  initialProfile?: Profile;
   onChange: (target: InviteTarget | undefined) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -42,7 +44,10 @@ function InvitePicker({
   // having to already know and type someone's exact username first.
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [selectedProfile, setSelectedProfile] = useState<Profile | undefined>();
+  // Seeded when this player was added straight from the "other accounts"
+  // list below — that tap already picked the account, so this picker
+  // should open already showing that choice instead of a blank search.
+  const [selectedProfile, setSelectedProfile] = useState<Profile | undefined>(initialProfile);
   const [useEmail, setUseEmail] = useState(false);
   const [email, setEmail] = useState("");
 
@@ -187,6 +192,12 @@ export default function NewMatchPage() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const newAvatarInputRef = useRef<HTMLInputElement>(null);
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, Profile>>({});
+  // Every other registered account, so this page can offer "add Maja and
+  // invite her" as one tap instead of requiring a guest player to be typed
+  // in by name first and only then linked to her real account.
+  const [otherProfiles, setOtherProfiles] = useState<Profile[]>([]);
+  const [addingAccountId, setAddingAccountId] = useState<string | null>(null);
+  const [preSelectedProfiles, setPreSelectedProfiles] = useState<Record<string, Profile>>({});
 
   useEffect(() => {
     load();
@@ -200,10 +211,42 @@ export default function NewMatchPage() {
     getProfiles(userIds).then(setProfilesByUserId);
   }, [players]);
 
+  useEffect(() => {
+    listProfiles(user?.id).then(setOtherProfiles);
+  }, [user?.id]);
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  }
+
+  // Accounts already represented by a player in this roster (linked once
+  // they've accepted an earlier invite, or already picked out for one below)
+  // shouldn't also show up as "someone new to invite".
+  const linkedUserIds = new Set(
+    players.map((p) => p.linkedUserId).filter((id): id is string => !!id),
+  );
+  const targetedUserIds = new Set(
+    Object.values(inviteTargets)
+      .map((t) => t.userId)
+      .filter((id): id is string => !!id),
+  );
+  const invitableProfiles = otherProfiles.filter(
+    (p) => !linkedUserIds.has(p.userId) && !targetedUserIds.has(p.userId),
+  );
+
+  async function handleSelectAccount(p: Profile) {
+    if (addingAccountId) return;
+    setAddingAccountId(p.userId);
+    try {
+      const player = await createPlayer(p.username ?? "Spelare");
+      setSelectedIds((prev) => [...prev, player.id]);
+      setInviteTargets((prev) => ({ ...prev, [player.id]: { userId: p.userId } }));
+      setPreSelectedProfiles((prev) => ({ ...prev, [player.id]: p }));
+    } finally {
+      setAddingAccountId(null);
+    }
   }
 
   function playerAvatarUrl(id: string): string | undefined {
@@ -386,6 +429,7 @@ export default function NewMatchPage() {
                       <InvitePicker
                         playerName={p.name}
                         currentUserId={user?.id}
+                        initialProfile={preSelectedProfiles[p.id]}
                         onChange={(target) =>
                           setInviteTargets((prev) => {
                             const next = { ...prev };
@@ -403,6 +447,36 @@ export default function NewMatchPage() {
                 <p className="text-sm text-muted-dim">Inga spelare ännu — lägg till en nedan.</p>
               )}
             </div>
+
+            {mode === "separate-devices" && invitableProfiles.length > 0 && (
+              <div className="mt-3 border-t border-white/10 pt-3">
+                <p className="mb-1.5 text-[10px] font-extrabold tracking-[.2em] text-sage">
+                  BJUD IN
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {invitableProfiles.map((p) => (
+                    <button
+                      key={p.userId}
+                      type="button"
+                      disabled={addingAccountId === p.userId}
+                      onClick={() => handleSelectAccount(p)}
+                      className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper disabled:opacity-60"
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
+                        {p.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          avatarInitials(p.username)
+                        )}
+                      </div>
+                      <span className="flex-1">{p.username}</span>
+                      <span className="text-xs text-gold-bright">Bjud in</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
               <button
