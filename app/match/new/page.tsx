@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import type { MatchMode } from "@/lib/domain/types";
 import { downscaleImage } from "@/lib/downscaleImage";
 import { getRepositories } from "@/lib/repositories";
+import { useAuthStore } from "@/lib/store/useAuthStore";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
-import { getProfiles, searchProfilesByUsername, type Profile } from "@/lib/supabase/profiles";
+import { getProfiles, listProfiles, type Profile } from "@/lib/supabase/profiles";
 
 function pillClass(active: boolean) {
   return `flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
@@ -28,35 +29,40 @@ function avatarInitials(text: string | null): string {
 
 function InvitePicker({
   playerName,
+  currentUserId,
   onChange,
 }: {
   playerName: string;
+  currentUserId?: string;
   onChange: (target: InviteTarget | undefined) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Profile[]>([]);
-  const [searching, setSearching] = useState(false);
+  // Every other registered account, loaded once and filtered client-side —
+  // the inviter should see who's available to invite right away instead of
+  // having to already know and type someone's exact username first.
+  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | undefined>();
   const [useEmail, setUseEmail] = useState(false);
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    if (!query.trim() || selectedProfile) return;
-    const timeout = setTimeout(() => {
-      setSearching(true);
-      searchProfilesByUsername(query)
-        .then(setResults)
-        .finally(() => setSearching(false));
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [query, selectedProfile]);
+    listProfiles(currentUserId).then((profiles) => {
+      setAllProfiles(profiles);
+      setLoaded(true);
+    });
+  }, [currentUserId]);
 
-  const visibleResults = !selectedProfile && query.trim() ? results : [];
+  const trimmedQuery = query.trim().toLowerCase();
+  const visibleResults = selectedProfile
+    ? []
+    : trimmedQuery
+      ? allProfiles.filter((p) => p.username?.toLowerCase().includes(trimmedQuery))
+      : allProfiles;
 
   function selectProfile(p: Profile) {
     setSelectedProfile(p);
     setQuery(p.username ?? "");
-    setResults([]);
     onChange({ userId: p.userId });
   }
 
@@ -121,12 +127,17 @@ function InvitePicker({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Sök användarnamn för ${playerName}`}
+            placeholder={`Sök eller välj konto för ${playerName}`}
             className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-sm text-paper placeholder:text-muted-dim"
           />
-          {searching && <p className="mt-1 text-xs text-muted-dim">Söker...</p>}
+          {!loaded && <p className="mt-1 text-xs text-muted-dim">Laddar konton...</p>}
+          {loaded && visibleResults.length === 0 && (
+            <p className="mt-1 text-xs text-muted-dim">
+              {trimmedQuery ? "Ingen matchade." : "Inga andra konton hittades ännu."}
+            </p>
+          )}
           {visibleResults.length > 0 && (
-            <div className="mt-1 flex flex-col gap-1 rounded-lg border border-white/10 bg-black/40 p-1">
+            <div className="mt-1 flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-white/10 bg-black/40 p-1">
               {visibleResults.map((p) => (
                 <button
                   key={p.userId}
@@ -162,6 +173,7 @@ function InvitePicker({
 
 export default function NewMatchPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const { players, load, createPlayer, localPlayerId, setPlayerAvatar } = usePlayersStore();
   const [mode, setMode] = useState<MatchMode>("separate-devices");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -373,6 +385,7 @@ export default function NewMatchPage() {
                     {showInvite && (
                       <InvitePicker
                         playerName={p.name}
+                        currentUserId={user?.id}
                         onChange={(target) =>
                           setInviteTargets((prev) => {
                             const next = { ...prev };

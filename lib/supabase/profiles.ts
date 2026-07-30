@@ -53,20 +53,20 @@ export async function updateUsername(userId: string, username: string): Promise<
   if (error) throw error;
 }
 
-/** Search for other users by username (case-insensitive, partial match). */
-export async function searchProfilesByUsername(
-  query: string,
-  excludeUserId?: string,
-): Promise<Profile[]> {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
+/**
+ * Every other registered account, so the new-match player picker can list
+ * them directly instead of requiring the inviter to already know and type
+ * their exact username. Small friend-group scale app — a flat capped list
+ * is simpler than a paginated directory.
+ */
+export async function listProfiles(excludeUserId?: string): Promise<Profile[]> {
   const supabase = getSupabaseClient();
   let q = supabase
     .from("profiles")
     .select("user_id, username, avatar_url")
     .not("username", "is", null)
-    .ilike("username", `%${trimmed}%`)
-    .limit(10);
+    .order("username", { ascending: true })
+    .limit(50);
   if (excludeUserId) q = q.neq("user_id", excludeUserId);
   const { data, error } = await q.returns<ProfileRow[]>();
   if (error) throw error;
