@@ -3,6 +3,7 @@
 import { animate, motion, useMotionValue } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { playerBelongsToUser } from "@/lib/domain/players";
 import { matchWinnerId, totalScore } from "@/lib/domain/scoring";
 import type { Match, MatchPlayer, Player } from "@/lib/domain/types";
 import { ALL_CATEGORY_IDS } from "@/lib/domain/types";
@@ -13,7 +14,7 @@ interface MatchCardProps {
   matchPlayers: MatchPlayer[];
   players: Record<string, Player>;
   profiles?: Record<string, Profile>;
-  localPlayerId?: string;
+  currentUserId?: string;
   onSwipeDelete?: () => void;
 }
 
@@ -30,7 +31,7 @@ export function MatchCard({
   matchPlayers,
   players,
   profiles,
-  localPlayerId,
+  currentUserId,
   onSwipeDelete,
 }: MatchCardProps) {
   const router = useRouter();
@@ -47,7 +48,7 @@ export function MatchCard({
   const activePlayerId = match.playerIds[match.currentPlayerIndex];
   const isYourTurn =
     !isCompleted &&
-    (match.mode === "shared-device" || activePlayerId === localPlayerId);
+    (match.mode === "shared-device" || playerBelongsToUser(players[activePlayerId], currentUserId));
   const progress = Math.min(1, (match.currentTurnNumber - 1) / ALL_CATEGORY_IDS.length);
 
   // Swiping only ever reveals the "TA BORT" button — it never deletes

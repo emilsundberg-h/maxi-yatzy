@@ -12,13 +12,14 @@ import { RollControls } from "@/components/match/RollControls";
 import { WinnerModal } from "@/components/match/WinnerModal";
 import { ScorecardGrid } from "@/components/scorecard/ScorecardGrid";
 import { scoreCategory } from "@/lib/domain/categories";
+import { playerBelongsToUser } from "@/lib/domain/players";
 import { matchWinnerId, totalScore } from "@/lib/domain/scoring";
 import { canRoll as engineCanRoll } from "@/lib/domain/turn";
 import { ALL_CATEGORY_IDS } from "@/lib/domain/types";
 import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
 import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
+import { useAuthStore } from "@/lib/store/useAuthStore";
 import { useMatchStore } from "@/lib/store/useMatchStore";
-import { usePlayersStore } from "@/lib/store/usePlayersStore";
 import { getProfiles, type Profile } from "@/lib/supabase/profiles";
 
 // A little longer than the dice's own longest possible roll animation
@@ -44,7 +45,7 @@ export default function MatchPage() {
     score,
     reset,
   } = useMatchStore();
-  const localPlayerId = usePlayersStore((s) => s.localPlayerId);
+  const authUserId = useAuthStore((s) => s.user?.id);
   const events = useActivityFeed(match?.id);
   const {
     pullDistance,
@@ -150,7 +151,7 @@ export default function MatchPage() {
   const activePlayerName = players[activePlayerId]?.name ?? "Spelare";
   const pool = activeMatchPlayer ? activeMatchPlayer.pool + poolDeltaSoFar : 0;
   const isLocalPlayersTurn =
-    match.mode === "shared-device" || activePlayerId === localPlayerId;
+    match.mode === "shared-device" || playerBelongsToUser(players[activePlayerId], authUserId);
   const hasRolled = turn.rollsUsedThisTurn > 0;
 
   // Fires only on the render where the dice actually finish tumbling (the

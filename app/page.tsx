@@ -6,6 +6,7 @@ import { ForfeitMatchModal } from "@/components/dashboard/ForfeitMatchModal";
 import { MatchCard } from "@/components/dashboard/MatchCard";
 import { PullToRefreshIndicator } from "@/components/dashboard/PullToRefreshIndicator";
 import { isAdminEmail } from "@/lib/domain/admin";
+import { playerBelongsToUser } from "@/lib/domain/players";
 import type { Match, MatchPlayer, Player } from "@/lib/domain/types";
 import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { getRepositories } from "@/lib/repositories";
@@ -17,7 +18,7 @@ export default function DashboardPage() {
   const authLoading = useAuthStore((s) => s.loading);
   const currentUser = useAuthStore((s) => s.user);
   const isAdmin = isAdminEmail(currentUser?.email);
-  const { players, localPlayerId, load, loaded } = usePlayersStore();
+  const { players, load, loaded } = usePlayersStore();
   const [pendingDeleteMatch, setPendingDeleteMatch] = useState<Match | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -104,14 +105,16 @@ export default function DashboardPage() {
     if (!match) return;
     setPendingDeleteMatch(null);
     setDeleteError(null);
-    // Whoever's device/account this is takes the loss. Falls back to the
-    // first player if this device isn't one of the match's participants
+    // Whoever's device/account this is takes the loss — found via which
+    // participant's player row is linked to this account, not by id (in
+    // separate-devices mode a participant's row usually lives in the match
+    // owner's roster, not this account's own). Falls back to the first
+    // player if this device isn't one of the match's participants
     // (shouldn't normally happen — the dashboard only ever lists matches
     // this account owns or is invited to).
     const forfeitingPlayerId =
-      localPlayerId && match.playerIds.includes(localPlayerId)
-        ? localPlayerId
-        : match.playerIds[0];
+      match.playerIds.find((id) => playerBelongsToUser(playersById[id], currentUser?.id)) ??
+      match.playerIds[0];
     const nextMatch: Match = {
       ...match,
       status: "completed",
@@ -220,7 +223,7 @@ export default function DashboardPage() {
                 matchPlayers={matchPlayersByMatch[m.id] ?? []}
                 players={playersById}
                 profiles={profilesByUserId}
-                localPlayerId={localPlayerId}
+                currentUserId={currentUser?.id}
                 onSwipeDelete={() => setPendingDeleteMatch(m)}
               />
             ))}
@@ -243,7 +246,7 @@ export default function DashboardPage() {
                   matchPlayers={matchPlayersByMatch[m.id] ?? []}
                   players={playersById}
                   profiles={profilesByUserId}
-                  localPlayerId={localPlayerId}
+                  currentUserId={currentUser?.id}
                 />
               ))}
             </div>
