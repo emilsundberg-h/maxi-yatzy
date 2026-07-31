@@ -12,3 +12,16 @@ export function playerBelongsToUser(
 ): boolean {
   return !!userId && player?.linkedUserId === userId;
 }
+
+// The same real person can be represented by more than one player row (their
+// own row when they own the match, a guest row someone else made for them
+// when that other person owns it instead) — so aggregating stats across
+// matches by raw row id fragments one person into several leaderboard
+// entries. Falls back to the row id itself for a never-linked guest player,
+// where there's no better shared identity to group by.
+export function canonicalPlayerId(
+  playerId: string,
+  playersById: Record<string, Pick<Player, "linkedUserId"> | undefined>,
+): string {
+  return playersById[playerId]?.linkedUserId ?? playerId;
+}
