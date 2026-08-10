@@ -15,6 +15,8 @@ import { getProfiles, type Profile } from "@/lib/supabase/profiles";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
 
+const COMPLETED_MATCH_VISIBLE_MS = 2 * 24 * 60 * 60 * 1000;
+
 export default function DashboardPage() {
   const authLoading = useAuthStore((s) => s.loading);
   const currentUser = useAuthStore((s) => s.user);
@@ -23,6 +25,10 @@ export default function DashboardPage() {
   const [pendingDeleteMatch, setPendingDeleteMatch] = useState<Match | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  // Reading Date.now() during render would make render impure, so it's
+  // captured as state alongside each matches fetch instead — good enough
+  // for a cutoff that only needs to be roughly "now", not live-ticking.
+  const [now, setNow] = useState(0);
   const [matchPlayersByMatch, setMatchPlayersByMatch] = useState<
     Record<string, MatchPlayer[]>
   >({});
@@ -47,6 +53,7 @@ export default function DashboardPage() {
     const list = await repos.matches.listMatches();
     list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     setMatches(list);
+    setNow(Date.now());
     const entries = await Promise.all(
       list.map(async (m) => [m.id, await repos.matches.listMatchPlayers(m.id)] as const),
     );
@@ -64,6 +71,7 @@ export default function DashboardPage() {
       const list = await repos.matches.listMatches();
       list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
       setMatches(list);
+      setNow(Date.now());
       const entries = await Promise.all(
         list.map(async (m) => [m.id, await repos.matches.listMatchPlayers(m.id)] as const),
       );
@@ -174,7 +182,16 @@ export default function DashboardPage() {
   }
 
   const inProgress = matches.filter((m) => m.status === "in_progress");
-  const completed = matches.filter((m) => m.status === "completed");
+  // Completed matches stay visible here only briefly — long enough to catch
+  // a "how'd we do" glance right after playing, not as a permanent archive
+  // (that's what /ranking is for). Falls back to updatedAt for the rare
+  // completed match missing completedAt, rather than hiding it outright.
+  const completedCutoff = now - COMPLETED_MATCH_VISIBLE_MS;
+  const completed = matches.filter(
+    (m) =>
+      m.status === "completed" &&
+      new Date(m.completedAt ?? m.updatedAt).getTime() >= completedCutoff,
+  );
 
   return (
     <div className="relative flex-1">
