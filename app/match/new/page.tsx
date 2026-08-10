@@ -52,6 +52,14 @@ function InvitePicker({
   const [email, setEmail] = useState("");
 
   useEffect(() => {
+    // Same reasoning as the account list on the page below: don't fetch
+    // with an undefined (not-yet-resolved) currentUserId, or the signed-in
+    // account itself can end up in the results — see the comment on that
+    // effect for why racing two fetches instead isn't safe either. In
+    // practice this component is never mounted before auth resolves (it
+    // only appears once a player is checked in separate-devices mode), but
+    // guard it anyway rather than relying on that.
+    if (!currentUserId) return;
     listProfiles(currentUserId).then((profiles) => {
       setAllProfiles(profiles);
       setLoaded(true);
@@ -220,7 +228,16 @@ export default function NewMatchPage() {
   }, [players]);
 
   useEffect(() => {
-    listProfiles(user?.id).then(setOtherProfiles);
+    // Waits for the real user id rather than firing with undefined on the
+    // first render (auth resolves asynchronously, after this effect would
+    // otherwise already have fired) — an unauthenticated listProfiles()
+    // call can't exclude anyone and would list the signed-in account
+    // itself as someone to invite. Racing that first, unfiltered fetch
+    // against a second, correctly-excluded one (once user.id lands) isn't
+    // safe either: whichever response happens to arrive last wins, so a
+    // slow first request can still overwrite the correct list.
+    if (!user?.id) return;
+    listProfiles(user.id).then(setOtherProfiles);
   }, [user?.id]);
 
   function toggleSelect(id: string) {
