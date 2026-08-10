@@ -10,6 +10,7 @@ import { playerBelongsToUser } from "@/lib/domain/players";
 import type { Match, MatchPlayer, Player } from "@/lib/domain/types";
 import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
 import { getRepositories } from "@/lib/repositories";
+import { createAuthedChannel } from "@/lib/supabase/authedChannel";
 import { getProfiles, type Profile } from "@/lib/supabase/profiles";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
@@ -72,6 +73,25 @@ export default function DashboardPage() {
   }, [loaded]);
 
   const { pullDistance, refreshing, threshold } = usePullToRefresh(refreshMatches);
+
+  // The initial load above only fires once per mount, so accepting an
+  // invite while this page is already sitting open behind the invite
+  // modal (the common case — the modal overlays whatever route is
+  // current) never picked up the newly-visible match without a manual
+  // pull-to-refresh. accept_invite's UPDATE on match_invites is a real
+  // row change, so it fires a Realtime event we can react to — unlike a
+  // match becoming visible via RLS, which fires nothing on its own since
+  // the match row itself doesn't change when it does.
+  useEffect(() => {
+    if (!currentUser) return;
+    return createAuthedChannel(`dashboard-invites:${currentUser.id}`, (channel) => {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "match_invites" },
+        () => refreshMatches(),
+      );
+    });
+  }, [currentUser, refreshMatches]);
 
   useEffect(() => {
     const allPlayers = [...players, ...Object.values(extraPlayersById)];
