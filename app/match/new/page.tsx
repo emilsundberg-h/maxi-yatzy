@@ -179,7 +179,8 @@ function InvitePicker({
 export default function NewMatchPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { players, load, createPlayer, localPlayerId, setPlayerAvatar } = usePlayersStore();
+  const { players, load, createPlayer, localPlayerId, setPlayerAvatar, linkPlayerToAccount } =
+    usePlayersStore();
   const [mode, setMode] = useState<MatchMode>("separate-devices");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [inviteTargets, setInviteTargets] = useState<Record<string, InviteTarget>>({});
@@ -199,6 +200,7 @@ export default function NewMatchPage() {
   const [otherProfiles, setOtherProfiles] = useState<Profile[]>([]);
   const [addingAccountId, setAddingAccountId] = useState<string | null>(null);
   const [preSelectedProfiles, setPreSelectedProfiles] = useState<Record<string, Profile>>({});
+  const [accountError, setAccountError] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -240,11 +242,23 @@ export default function NewMatchPage() {
   async function handleSelectAccount(p: Profile) {
     if (addingAccountId) return;
     setAddingAccountId(p.userId);
+    setAccountError(null);
     try {
       const player = await createPlayer(p.username ?? "Spelare");
       setSelectedIds((prev) => [...prev, player.id]);
-      setInviteTargets((prev) => ({ ...prev, [player.id]: { userId: p.userId } }));
       setPreSelectedProfiles((prev) => ({ ...prev, [player.id]: p }));
+      if (mode === "shared-device") {
+        // Everyone's at the same screen in this mode, so there's no separate
+        // device to send an invite to and confirm from — being picked here
+        // already means they're sitting right here. Link the row to their
+        // real account immediately so this match's stats attribute to them,
+        // the same as if they'd played it on their own device.
+        await linkPlayerToAccount(player.id, p.userId);
+      } else {
+        setInviteTargets((prev) => ({ ...prev, [player.id]: { userId: p.userId } }));
+      }
+    } catch (err) {
+      setAccountError(err instanceof Error ? err.message : "Kunde inte lägga till kontot.");
     } finally {
       setAddingAccountId(null);
     }
@@ -253,7 +267,15 @@ export default function NewMatchPage() {
   function playerAvatarUrl(id: string): string | undefined {
     const p = players.find((x) => x.id === id);
     if (!p) return undefined;
-    return (p.linkedUserId ? profilesByUserId[p.linkedUserId]?.avatarUrl : undefined) ?? p.avatarUrl ?? undefined;
+    return (
+      (p.linkedUserId ? profilesByUserId[p.linkedUserId]?.avatarUrl : undefined) ??
+      // While the profilesByUserId fetch for a just-linked account is still
+      // in flight, fall back to the profile picked from the account list —
+      // avoids a flash of the initials placeholder for a split second.
+      preSelectedProfiles[id]?.avatarUrl ??
+      p.avatarUrl ??
+      undefined
+    );
   }
 
   async function handleNewAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -446,6 +468,9 @@ export default function NewMatchPage() {
                       </div>
                       <span>{p.name}</span>
                       {isSelf && <span className="ml-auto text-xs text-muted">Du</span>}
+                      {!isSelf && p.linkedUserId && (
+                        <span className="ml-auto text-xs text-muted">Kopplat konto</span>
+                      )}
                     </label>
                     {showInvite && (
                       <InvitePicker
@@ -470,10 +495,10 @@ export default function NewMatchPage() {
               )}
             </div>
 
-            {mode === "separate-devices" && invitableProfiles.length > 0 && (
+            {invitableProfiles.length > 0 && (
               <div className="mt-3 border-t border-white/10 pt-3">
                 <p className="mb-1.5 text-[10px] font-extrabold tracking-[.2em] text-sage">
-                  BJUD IN
+                  {mode === "separate-devices" ? "BJUD IN" : "LÄGG TILL KONTO"}
                 </p>
                 <div className="flex flex-col gap-1.5">
                   {invitableProfiles.map((p) => (
@@ -493,10 +518,13 @@ export default function NewMatchPage() {
                         )}
                       </div>
                       <span className="flex-1">{p.username}</span>
-                      <span className="text-xs text-gold-bright">Bjud in</span>
+                      <span className="text-xs text-gold-bright">
+                        {mode === "separate-devices" ? "Bjud in" : "Lägg till"}
+                      </span>
                     </button>
                   ))}
                 </div>
+                {accountError && <p className="mt-1.5 text-xs text-red-400">{accountError}</p>}
               </div>
             )}
 
