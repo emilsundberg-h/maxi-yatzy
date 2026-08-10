@@ -186,6 +186,7 @@ export default function NewMatchPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [newAvatarBlob, setNewAvatarBlob] = useState<Blob | null>(null);
   const [newAvatarPreview, setNewAvatarPreview] = useState<string | null>(null);
@@ -310,14 +311,20 @@ export default function NewMatchPage() {
   async function handleStart() {
     if (selectedIds.length < 1) return;
     setCreating(true);
-    const repos = getRepositories();
-    const match = await repos.matches.createMatch(mode, selectedIds);
-    if (mode === "separate-devices") {
-      await Promise.all(
-        selectedIds
-          .filter((id) => id !== localPlayerId && inviteTargets[id])
-          .map((id) =>
-            fetch("/api/invites", {
+    setStartError(null);
+    try {
+      const repos = getRepositories();
+      const match = await repos.matches.createMatch(mode, selectedIds);
+      if (mode === "separate-devices") {
+        // fetch() only rejects on network failure — it resolves normally for
+        // 4xx/5xx responses too, so each result must be checked explicitly.
+        // Otherwise a rejected/failed invite (e.g. a transient error) is
+        // silently swallowed and the recipient never sees a request, with no
+        // sign anything went wrong on the inviter's side either.
+        const targets = selectedIds.filter((id) => id !== localPlayerId && inviteTargets[id]);
+        const results = await Promise.all(
+          targets.map(async (id) => {
+            const res = await fetch("/api/invites", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -326,11 +333,26 @@ export default function NewMatchPage() {
                 invitedUserId: inviteTargets[id].userId,
                 invitedEmail: inviteTargets[id].email,
               }),
-            }),
-          ),
-      );
+            });
+            if (res.ok) return { id, ok: true as const };
+            const data = await res.json().catch(() => ({}));
+            return { id, ok: false as const, error: data?.error as string | undefined };
+          }),
+        );
+        const failed = results.filter((r) => !r.ok);
+        if (failed.length > 0) {
+          const names = failed
+            .map((f) => players.find((p) => p.id === f.id)?.name ?? "spelare")
+            .join(", ");
+          setStartError(`Kunde inte bjuda in: ${names}. Matchen skapades ändå.`);
+        }
+      }
+      router.push(`/match/${match.id}`);
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : "Kunde inte starta matchen.");
+    } finally {
+      setCreating(false);
     }
-    router.push(`/match/${match.id}`);
   }
 
   const selectedNames = selectedIds
@@ -528,6 +550,12 @@ export default function NewMatchPage() {
           </div>
         )}
       </div>
+
+      {startError && (
+        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+          {startError}
+        </p>
+      )}
 
       <button
         type="button"
