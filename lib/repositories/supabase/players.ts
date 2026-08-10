@@ -59,4 +59,13 @@ export class SupabasePlayerRepository implements PlayerRepository {
       .eq("id", id);
     if (error) throw error;
   }
+
+  // Needs supabase/migrations/0010_players_delete.sql — players never had a
+  // DELETE policy (only select/insert/update), so this 403s until that's
+  // applied.
+  async deletePlayer(id: string): Promise<void> {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.from("players").delete().eq("id", id);
+    if (error) throw error;
+  }
 }

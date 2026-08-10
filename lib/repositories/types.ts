@@ -21,6 +21,13 @@ export interface PlayerRepository {
    * storage).
    */
   linkPlayerToAccount(id: string, userId: string): Promise<void>;
+  /**
+   * Permanently removes this player row — e.g. a duplicate/guest row
+   * created before it got linked to someone's real account. Cascades to
+   * that player's match_players/activity/match_invites rows, so any
+   * matches they took part in lose their history for that player.
+   */
+  deletePlayer(id: string): Promise<void>;
 }
 
 export interface MatchRepository {

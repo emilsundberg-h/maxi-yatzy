@@ -32,6 +32,7 @@ function makeFakeRepos(): Repositories & {
       },
       async renamePlayer() {},
       async linkPlayerToAccount() {},
+      async deletePlayer() {},
     },
     matches: {
       async createMatch(mode: MatchMode, playerIds: string[]) {

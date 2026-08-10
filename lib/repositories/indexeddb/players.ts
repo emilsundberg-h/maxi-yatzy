@@ -39,4 +39,9 @@ export class IndexedDbPlayerRepository implements PlayerRepository {
     if (!player) return;
     await db.put("players", { ...player, linkedUserId: userId });
   }
+
+  async deletePlayer(id: string): Promise<void> {
+    const db = await getDb();
+    await db.delete("players", id);
+  }
 }
