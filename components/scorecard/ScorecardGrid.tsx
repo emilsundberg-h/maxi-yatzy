@@ -105,10 +105,15 @@ export function ScorecardGrid({
         onClick={handleClick}
         aria-label={armed ? `${CATEGORY_LABELS[categoryId]}: tryck igen för att låsa` : undefined}
         className={`relative border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
-          armed ? "bg-[rgba(223,185,85,.08)]" : isActiveCol ? "bg-gold/10" : ""
+          // A translucent tint spanning the whole cell behind the pill read
+          // as a label sitting inside a box, not as a label in its own
+          // right — so the active-column wash only applies where there's no
+          // pill to carry that signal itself (locked cells, or this column
+          // before dice have been rolled).
+          !clickable && isActiveCol ? "bg-gold/10" : ""
         } ${
           clickable
-            ? "cursor-pointer hover:bg-gold/10"
+            ? "cursor-pointer"
             : filled !== undefined
               ? "font-bold text-paper"
               : "cursor-default text-[#5d6b62]"
@@ -128,21 +133,23 @@ export function ScorecardGrid({
                 TRYCK IGEN
               </span>
             )}
-            {/* The label: a little tag marking "this is what you'd score
-                here", colored to signal outcome at a glance — flat gold for
-                points, a dull flat red for a category that would score zero
-                right now (colors and radius match the design 1:1, not the
-                app's usual gold gradient — that's the point of this pass).
-                Arming it (first tap) grows the tag and adds a gold halo so
-                the "tap again to confirm" cue stays with the number instead
-                of taking over the row. No vertical padding and leading-none:
-                this sits inside the same py-1 button as a plain
-                filled/placeholder cell, so it must fit that exact line
-                height, or every row grows the moment it's your turn and
-                shrinks back the moment it isn't. */}
+            {/* The whole hit target should read as one label, not a tag
+                floating inside a separate box — so this pill is fully
+                rounded (stadium-shaped) and padded to fill most of the
+                cell itself, with nothing else behind it. Colored to signal
+                outcome at a glance — flat gold for points, a dull flat red
+                for a category that would score zero right now (matches the
+                design's flat colors, not the app's usual gold gradient —
+                that's the point of this pass). Arming it (first tap) grows
+                the pill and adds a gold halo so the "tap again to confirm"
+                cue stays with the number itself. No vertical padding and
+                leading-none: this sits inside the same py-1 button as a
+                plain filled/placeholder cell, so it must fit that exact
+                line height, or every row grows the moment it's your turn
+                and shrinks back the moment it isn't. */}
             <span
-              className={`inline-flex min-w-[1.9em] items-center justify-center rounded-[10px] px-1.5 py-0 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
-                armed ? "scale-[1.22] shadow-[0_0_0_4px_rgba(223,185,85,.35)]" : "scale-100"
+              className={`inline-flex min-w-[2.1em] items-center justify-center rounded-full px-2 py-0.5 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+                armed ? "scale-[1.18] shadow-[0_0_0_4px_rgba(223,185,85,.35)]" : "scale-100"
               } ${
                 (preview ?? 0) > 0
                   ? "bg-[#dfb955] text-[#2a2103]"
