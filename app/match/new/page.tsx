@@ -335,6 +335,16 @@ export default function NewMatchPage() {
     }
   }
 
+  // A player already linked to a real account (from an earlier accepted
+  // invite) doesn't need the InvitePicker filled in again — the app already
+  // knows exactly who they are. Falling back to inviteTargets means an
+  // explicit picker choice still wins if one was made anyway.
+  function resolveInviteTarget(playerId: string): InviteTarget | undefined {
+    if (inviteTargets[playerId]) return inviteTargets[playerId];
+    const linkedUserId = players.find((p) => p.id === playerId)?.linkedUserId;
+    return linkedUserId ? { userId: linkedUserId } : undefined;
+  }
+
   async function handleStart() {
     if (selectedIds.length < 1) return;
     setCreating(true);
@@ -348,17 +358,20 @@ export default function NewMatchPage() {
         // Otherwise a rejected/failed invite (e.g. a transient error) is
         // silently swallowed and the recipient never sees a request, with no
         // sign anything went wrong on the inviter's side either.
-        const targets = selectedIds.filter((id) => id !== localPlayerId && inviteTargets[id]);
+        const targets = selectedIds
+          .filter((id) => id !== localPlayerId)
+          .map((id) => ({ id, target: resolveInviteTarget(id) }))
+          .filter((t): t is { id: string; target: InviteTarget } => !!t.target);
         const results = await Promise.all(
-          targets.map(async (id) => {
+          targets.map(async ({ id, target }) => {
             const res = await fetch("/api/invites", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 matchId: match.id,
                 playerId: id,
-                invitedUserId: inviteTargets[id].userId,
-                invitedEmail: inviteTargets[id].email,
+                invitedUserId: target.userId,
+                invitedEmail: target.email,
               }),
             });
             if (res.ok) return { id, ok: true as const };
@@ -449,7 +462,11 @@ export default function NewMatchPage() {
               {players.map((p) => {
                 const isSelf = p.id === localPlayerId;
                 const isSelected = selectedIds.includes(p.id);
-                const showInvite = mode === "separate-devices" && isSelected && !isSelf;
+                // Already-linked players don't need the picker — there's
+                // nothing to pick, resolveInviteTarget already knows who
+                // they are from their own linkedUserId.
+                const showInvite =
+                  mode === "separate-devices" && isSelected && !isSelf && !p.linkedUserId;
                 const avatarUrl = playerAvatarUrl(p.id);
                 return (
                   <div
@@ -474,7 +491,11 @@ export default function NewMatchPage() {
                       <span>{p.name}</span>
                       {isSelf && <span className="ml-auto text-xs text-muted">Du</span>}
                       {!isSelf && p.linkedUserId && (
-                        <span className="ml-auto text-xs text-muted">Kopplat konto</span>
+                        <span className="ml-auto text-xs text-muted">
+                          {isSelected && mode === "separate-devices"
+                            ? "Kopplat konto · bjuds in automatiskt"
+                            : "Kopplat konto"}
+                        </span>
                       )}
                     </label>
                     {showInvite && (
