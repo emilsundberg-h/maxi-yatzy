@@ -145,11 +145,11 @@ export function ScorecardGrid({
                 lighter red on a red one), never a foreign white/cream ring
                 that clashes against the red pills. */}
             <span
-              className={`inline-flex min-w-[34px] items-center justify-center rounded-[10px] border-2 border-transparent px-2.5 py-1 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+              className={`inline-flex min-w-[34px] items-center justify-center rounded-[10px] border-2 border-transparent px-2.5 py-1 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-all duration-150 ${
                 armed
                   ? positive
-                    ? "scale-[1.32] border-[#eecb7c] shadow-[0_0_0_4px_rgba(223,185,85,.35)]"
-                    : "scale-[1.32] border-[#8a4a4a] shadow-[0_0_0_4px_rgba(139,74,74,.35)]"
+                    ? "scale-[1.32] border-[#eecb7c] shadow-[0_0_0_5px_rgba(223,185,85,.6)] brightness-110"
+                    : "scale-[1.32] border-[#8a4a4a] shadow-[0_0_0_5px_rgba(139,74,74,.6)] brightness-110"
                   : "scale-100"
               } ${positive ? "bg-[#dfb955] text-[#2a2103]" : "bg-[#5b3838] text-[#d9b7b7]"}`}
             >
