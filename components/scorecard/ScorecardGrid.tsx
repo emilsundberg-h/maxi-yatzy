@@ -86,6 +86,7 @@ export function ScorecardGrid({
     const armed = clickable && armedCategoryId === categoryId;
     const preview = isActiveCol && previewDice ? scoreCategory(categoryId, previewDice) : undefined;
     const text = filled !== undefined ? filled : clickable ? preview : "·";
+    const positive = (preview ?? 0) > 0;
 
     function handleClick() {
       if (!clickable) return;
@@ -139,18 +140,18 @@ export function ScorecardGrid({
                 signal outcome at a glance — flat gold for points, a dull
                 flat red for a category that would score zero right now
                 (matches the design's flat colors, not the app's usual gold
-                gradient). The cream border is always on — same color at
-                rest as once armed — so arming only has to grow the pill and
-                add the halo to read as "tap again to confirm", not also
-                change what color it is. */}
+                gradient). No border at rest — arming adds one in the same
+                tone as the pill's own fill (a lighter gold on a gold pill, a
+                lighter red on a red one), never a foreign white/cream ring
+                that clashes against the red pills. */}
             <span
-              className={`inline-flex min-w-[34px] items-center justify-center rounded-[10px] border-2 border-[#f2ecd9] px-2.5 py-1 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
-                armed ? "scale-[1.32] shadow-[0_0_0_4px_rgba(223,185,85,.35)]" : "scale-100"
-              } ${
-                (preview ?? 0) > 0
-                  ? "bg-[#dfb955] text-[#2a2103]"
-                  : "bg-[#5b3838] text-[#d9b7b7]"
-              }`}
+              className={`inline-flex min-w-[34px] items-center justify-center rounded-[10px] border-2 border-transparent px-2.5 py-1 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+                armed
+                  ? positive
+                    ? "scale-[1.32] border-[#eecb7c] shadow-[0_0_0_4px_rgba(223,185,85,.35)]"
+                    : "scale-[1.32] border-[#8a4a4a] shadow-[0_0_0_4px_rgba(139,74,74,.35)]"
+                  : "scale-100"
+              } ${positive ? "bg-[#dfb955] text-[#2a2103]" : "bg-[#5b3838] text-[#d9b7b7]"}`}
             >
               {text}
             </span>
