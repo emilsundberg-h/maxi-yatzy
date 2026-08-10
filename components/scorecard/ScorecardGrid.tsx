@@ -55,6 +55,19 @@ export function ScorecardGrid({
   const COLUMN_WIDTH = 50;
   const gridTemplateColumns = `${LABEL_WIDTH}px repeat(${orderedPlayerIds.length}, minmax(${COLUMN_WIDTH}px, 1fr))`;
 
+  function avatarUrl(id: string): string | undefined {
+    const linkedUserId = players[id]?.linkedUserId;
+    return (
+      (linkedUserId ? profiles?.[linkedUserId]?.avatarUrl : undefined) ??
+      players[id]?.avatarUrl ??
+      undefined
+    );
+  }
+
+  // Tapping a header avatar shows it full-size — the header itself only has
+  // room for a 24px circle, too small to actually recognize anyone by.
+  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
+
   // Scoring a category takes two taps — the first just arms the cell, the
   // second (on that same cell) actually locks it in — so a stray tap on the
   // scorecard can't silently burn a category. A new roll changes what every
@@ -151,127 +164,162 @@ export function ScorecardGrid({
     );
   }
 
+  const expandedPlayer = expandedPlayerId ? players[expandedPlayerId] : undefined;
+  const expandedAvatarUrl = expandedPlayerId ? avatarUrl(expandedPlayerId) : undefined;
+
   return (
-    <div
-      className="w-full overflow-x-auto rounded-2xl border border-gold/15 p-1.5"
-      style={{ background: LABEL_BG }}
-    >
+    <>
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns,
-          minWidth: orderedPlayerIds.length * COLUMN_WIDTH + LABEL_WIDTH,
-        }}
+        className="w-full overflow-x-auto rounded-2xl border border-gold/15 p-1.5"
+        style={{ background: LABEL_BG }}
       >
-        {/* header */}
-        <div className="sticky left-0 z-10" style={{ background: LABEL_BG }} />
-        {orderedPlayerIds.map((id) => {
-          const isActive = id === activePlayerId;
-          const linkedUserId = players[id]?.linkedUserId;
-          const avatarUrl =
-            (linkedUserId ? profiles?.[linkedUserId]?.avatarUrl : undefined) ??
-            players[id]?.avatarUrl ??
-            undefined;
-          return (
-            <div
-              key={id}
-              className="flex flex-col items-center gap-0.5 border-b border-gold/25 px-0.5 pb-1"
-            >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns,
+            minWidth: orderedPlayerIds.length * COLUMN_WIDTH + LABEL_WIDTH,
+          }}
+        >
+          {/* header */}
+          <div className="sticky left-0 z-10" style={{ background: LABEL_BG }} />
+          {orderedPlayerIds.map((id) => {
+            const isActive = id === activePlayerId;
+            const url = avatarUrl(id);
+            return (
               <div
-                className={`flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[9px] font-extrabold ${
-                  isActive
-                    ? "bg-gradient-to-br from-[#e9c877] to-[#b58a37] text-[#241a08]"
-                    : "border border-white/15 bg-white/10 text-paper-dim"
-                }`}
+                key={id}
+                className="flex flex-col items-center gap-0.5 border-b border-gold/25 px-0.5 pb-1"
               >
-                {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  initials(players[id]?.name ?? "?")
-                )}
+                <button
+                  type="button"
+                  onClick={() => setExpandedPlayerId(id)}
+                  aria-label={`Visa ${players[id]?.name ?? "spelaren"}s bild`}
+                  className={`flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[9px] font-extrabold ${
+                    isActive
+                      ? "bg-gradient-to-br from-[#e9c877] to-[#b58a37] text-[#241a08]"
+                      : "border border-white/15 bg-white/10 text-paper-dim"
+                  }`}
+                >
+                  {url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    initials(players[id]?.name ?? "?")
+                  )}
+                </button>
+                <span
+                  className={`max-w-full truncate text-[9px] font-semibold ${
+                    isActive ? "text-gold-bright" : "text-paper-dim"
+                  }`}
+                >
+                  {players[id]?.name ?? "?"}
+                </span>
               </div>
-              <span
-                className={`max-w-full truncate text-[9px] font-semibold ${
-                  isActive ? "text-gold-bright" : "text-paper-dim"
-                }`}
-              >
-                {players[id]?.name ?? "?"}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
 
-        <Row
-          label={
-            <div className="px-2 py-0.5 text-[9px] font-extrabold tracking-[.2em] text-sage">
-              ÖVRE
-            </div>
-          }
-          cells={orderedPlayerIds.map((id) => (
-            <div key={id} />
-          ))}
-        />
-        {UPPER_CATEGORY_IDS.map((id) => (
           <Row
-            key={id}
             label={
-              <div className="px-2 py-1 text-[13px] text-paper-dim">{CATEGORY_LABELS[id]}</div>
+              <div className="px-2 py-0.5 text-[9px] font-extrabold tracking-[.2em] text-sage">
+                ÖVRE
+              </div>
             }
-            cells={orderedPlayerIds.map((playerId) => categoryCell(id, playerId))}
+            cells={orderedPlayerIds.map((id) => (
+              <div key={id} />
+            ))}
           />
-        ))}
-
-        <Row
-          label={
-            <div className="px-2 py-1 text-[11px] font-medium text-paper-dim">Summa övre</div>
-          }
-          cells={orderedPlayerIds.map((id) =>
-            numberCell(id, upperSum(mpByPlayer.get(id)!.scores)),
-          )}
-        />
-        <Row
-          label={
-            <div className="px-2 py-1 text-[10px] font-semibold text-gold-bright">
-              Bonus ({UPPER_BONUS_THRESHOLD})
-            </div>
-          }
-          cells={orderedPlayerIds.map((id) =>
-            numberCell(id, upperBonus(mpByPlayer.get(id)!.scores), { gold: true }),
-          )}
-        />
-
-        <Row
-          label={
-            <div className="px-2 py-0.5 text-[9px] font-extrabold tracking-[.2em] text-sage">
-              NEDRE
-            </div>
-          }
-          cells={orderedPlayerIds.map((id) => (
-            <div key={id} />
+          {UPPER_CATEGORY_IDS.map((id) => (
+            <Row
+              key={id}
+              label={
+                <div className="px-2 py-1 text-[13px] text-paper-dim">{CATEGORY_LABELS[id]}</div>
+              }
+              cells={orderedPlayerIds.map((playerId) => categoryCell(id, playerId))}
+            />
           ))}
-        />
-        {LOWER_CATEGORY_IDS.map((id) => (
-          <Row
-            key={id}
-            label={
-              <div className="px-2 py-1 text-[13px] text-paper-dim">{CATEGORY_LABELS[id]}</div>
-            }
-            cells={orderedPlayerIds.map((playerId) => categoryCell(id, playerId))}
-          />
-        ))}
 
-        <Row
-          label={
-            <div className="px-2 py-1 font-serif text-[15px] font-bold text-gold-bright">
-              Totalt
-            </div>
-          }
-          cells={orderedPlayerIds.map((id) =>
-            numberCell(id, totalScore(mpByPlayer.get(id)!.scores), { total: true }),
-          )}
-        />
+          <Row
+            label={
+              <div className="px-2 py-1 text-[11px] font-medium text-paper-dim">Summa övre</div>
+            }
+            cells={orderedPlayerIds.map((id) =>
+              numberCell(id, upperSum(mpByPlayer.get(id)!.scores)),
+            )}
+          />
+          <Row
+            label={
+              <div className="px-2 py-1 text-[10px] font-semibold text-gold-bright">
+                Bonus ({UPPER_BONUS_THRESHOLD})
+              </div>
+            }
+            cells={orderedPlayerIds.map((id) =>
+              numberCell(id, upperBonus(mpByPlayer.get(id)!.scores), { gold: true }),
+            )}
+          />
+
+          <Row
+            label={
+              <div className="px-2 py-0.5 text-[9px] font-extrabold tracking-[.2em] text-sage">
+                NEDRE
+              </div>
+            }
+            cells={orderedPlayerIds.map((id) => (
+              <div key={id} />
+            ))}
+          />
+          {LOWER_CATEGORY_IDS.map((id) => (
+            <Row
+              key={id}
+              label={
+                <div className="px-2 py-1 text-[13px] text-paper-dim">{CATEGORY_LABELS[id]}</div>
+              }
+              cells={orderedPlayerIds.map((playerId) => categoryCell(id, playerId))}
+            />
+          ))}
+
+          <Row
+            label={
+              <div className="px-2 py-1 font-serif text-[15px] font-bold text-gold-bright">
+                Totalt
+              </div>
+            }
+            cells={orderedPlayerIds.map((id) =>
+              numberCell(id, totalScore(mpByPlayer.get(id)!.scores), { total: true }),
+            )}
+          />
+        </div>
       </div>
-    </div>
+
+      {expandedPlayerId && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-6"
+          onClick={() => setExpandedPlayerId(null)}
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div
+              className="flex h-56 w-56 max-w-[70vw] items-center justify-center overflow-hidden rounded-full border-4 border-gold/40 text-6xl font-extrabold text-paper-dim shadow-[0_20px_50px_rgba(0,0,0,.5)]"
+              style={{ background: "#1a1410", aspectRatio: "1 / 1" }}
+            >
+              {expandedAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={expandedAvatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initials(expandedPlayer?.name ?? "?")
+              )}
+            </div>
+            <span className="font-serif text-xl font-semibold text-paper">
+              {expandedPlayer?.name ?? "?"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setExpandedPlayerId(null)}
+              className="mt-1 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold text-paper-dim"
+            >
+              Stäng
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
