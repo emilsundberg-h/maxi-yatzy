@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { CATEGORY_LABELS, scoreCategory } from "@/lib/domain/categories";
 import { totalScore, upperBonus, upperSum } from "@/lib/domain/scoring";
 import {
@@ -27,6 +27,11 @@ function initials(name: string): string {
 }
 
 const LABEL_BG = "#0a1712";
+// How long an armed (first-tapped) cell waits for the confirming second tap
+// before quietly disarming itself again — a stray arm from earlier in the
+// turn shouldn't stay primed to lock in a category on the next unrelated
+// tap.
+const ARM_TIMEOUT_MS = 2600;
 
 function Row({ label, cells }: { label: ReactNode; cells: ReactNode[] }) {
   return (
@@ -79,6 +84,12 @@ export function ScorecardGrid({
     setArmedCategoryId(null);
   }
 
+  useEffect(() => {
+    if (armedCategoryId === null) return;
+    const timer = setTimeout(() => setArmedCategoryId(null), ARM_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [armedCategoryId]);
+
   function categoryCell(categoryId: CategoryId, playerId: string) {
     const mp = mpByPlayer.get(playerId)!;
     const isActiveCol = playerId === activePlayerId;
@@ -88,6 +99,7 @@ export function ScorecardGrid({
     const armed = clickable && armedCategoryId === categoryId;
     const preview = isActiveCol && previewDice ? scoreCategory(categoryId, previewDice) : undefined;
     const text = filled !== undefined ? filled : clickable ? preview : "·";
+    const positive = (preview ?? 0) > 0;
 
     function handleClick() {
       if (!clickable) return;
@@ -106,38 +118,57 @@ export function ScorecardGrid({
         disabled={!clickable}
         onClick={handleClick}
         aria-label={armed ? `${CATEGORY_LABELS[categoryId]}: tryck igen för att låsa` : undefined}
-        className={`border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
-          isActiveCol ? "bg-gold/10" : ""
-        } ${
+        className={`relative border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
+          // No background wash on the cell itself, clickable or not — the
+          // design's cells are always plain (fully transparent, no matter
+          // whose column or locked/unlocked) and let the pill or the plain
+          // locked number be the only colored thing on the row. A tint on
+          // some cells and not others read as two different visual systems
+          // (boxed rows vs. free-floating labels) instead of one.
           clickable
-            ? "cursor-pointer hover:bg-gold/10"
+            ? "cursor-pointer"
             : filled !== undefined
-              ? "font-semibold text-paper"
+              ? "font-bold text-paper"
               : "cursor-default text-[#5d6b62]"
         }`}
       >
         {clickable ? (
-          // The label: a little tag marking "this is what you'd score here",
-          // colored to signal outcome at a glance — gold for points, a dull
-          // red for a category that would score zero right now. Arming it
-          // (first tap) just grows the tag itself rather than filling the
-          // whole cell gold, so the "tap again to confirm" cue stays with
-          // the number instead of taking over the row. No vertical padding
-          // and leading-none: this sits inside the same py-1 button as a
-          // plain filled/placeholder cell, so it must fit that exact line
-          // height, or every row grows the moment it's your turn and
-          // shrinks back the moment it isn't.
-          <span
-            className={`inline-flex min-w-[1.9em] items-center justify-center rounded px-1.5 py-0 text-[12px] leading-none font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
-              armed ? "scale-125" : "scale-100"
-            } ${
-              (preview ?? 0) > 0
-                ? "bg-gradient-to-br from-[#eecb7c] to-[#b98d38] text-[#241708]"
-                : "bg-[#5c2a2a] text-[#e8b9b9]"
-            }`}
-          >
-            {text}
-          </span>
+          <>
+            {armed && (
+              // Arming a cell used to only grow the tag itself — easy to
+              // miss that a second tap is required. A floating "press
+              // again" callout above the cell makes the two-tap gesture
+              // obvious instead of implicit. pointer-events-none so it
+              // never steals the confirming tap from the button beneath it.
+              <span
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1a3428] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-[#e9dcb8] shadow-[0_4px_8px_rgba(0,0,0,.35)]"
+              >
+                TRYCK IGEN
+              </span>
+            )}
+            {/* The whole hit target should read as one label, not a tag
+                floating inside a separate box — so this pill is padded to
+                fill most of the cell itself, with nothing else behind it.
+                Sized to the design's own min-width (34px). Colored to
+                signal outcome at a glance — flat gold for points, a dull
+                flat red for a category that would score zero right now
+                (matches the design's flat colors, not the app's usual gold
+                gradient). No border at rest — arming adds one in the same
+                tone as the pill's own fill (a lighter gold on a gold pill, a
+                lighter red on a red one), never a foreign white/cream ring
+                that clashes against the red pills. */}
+            <span
+              className={`inline-flex min-w-[34px] items-center justify-center rounded-[10px] border-2 border-transparent px-2.5 py-1 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-all duration-150 ${
+                armed
+                  ? positive
+                    ? "scale-[1.32] border-[#eecb7c] shadow-[0_0_0_5px_rgba(223,185,85,.6)] brightness-110"
+                    : "scale-[1.32] border-[#8a4a4a] shadow-[0_0_0_5px_rgba(139,74,74,.6)] brightness-110"
+                  : "scale-100"
+              } ${positive ? "bg-[#dfb955] text-[#2a2103]" : "bg-[#5b3838] text-[#d9b7b7]"}`}
+            >
+              {text}
+            </span>
+          </>
         ) : (
           text
         )}

@@ -12,6 +12,22 @@ export interface PlayerRepository {
   getPlayer(id: string): Promise<Player | undefined>;
   listPlayers(): Promise<Player[]>;
   renamePlayer(id: string, name: string): Promise<void>;
+  /**
+   * Attributes this player row's match history to `userId`'s own stats
+   * (see canonicalPlayerId) without going through the cross-device invite
+   * flow — for shared-device matches, whoever the row belongs to is right
+   * there at the same screen, so there's no separate device to confirm
+   * from. No-op where there's no concept of other users (e.g. local-only
+   * storage).
+   */
+  linkPlayerToAccount(id: string, userId: string): Promise<void>;
+  /**
+   * Permanently removes this player row — e.g. a duplicate/guest row
+   * created before it got linked to someone's real account. Cascades to
+   * that player's match_players/activity/match_invites rows, so any
+   * matches they took part in lose their history for that player.
+   */
+  deletePlayer(id: string): Promise<void>;
 }
 
 export interface MatchRepository {

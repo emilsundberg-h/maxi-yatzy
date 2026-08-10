@@ -44,15 +44,26 @@ export function PendingInviteModal() {
   const { user } = useAuthStore();
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [busy, setBusy] = useState(false);
+  const [respondError, setRespondError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
 
     function refresh() {
-      loadPendingInvites().then((list) => {
-        if (!cancelled) setInvites(list);
-      });
+      loadPendingInvites()
+        .then((list) => {
+          if (!cancelled) setInvites(list);
+        })
+        .catch((err) => {
+          // A failure here (e.g. the RPC firing before the auth session is
+          // fully hydrated right after app load on a fresh device) must not
+          // permanently hide a real pending invite — retry shortly instead
+          // of leaving the user staring at nothing with no way to recover
+          // short of an unrelated realtime event.
+          console.error("Kunde inte hämta inbjudningar", err);
+          if (!cancelled) setTimeout(refresh, 3000);
+        });
     }
     refresh();
 
@@ -75,6 +86,7 @@ export function PendingInviteModal() {
   async function respond(accept: boolean) {
     if (!invite || busy) return;
     setBusy(true);
+    setRespondError(null);
     try {
       const supabase = getSupabaseClient();
       const { error } = await supabase.rpc(accept ? "accept_invite" : "decline_invite", {
@@ -82,6 +94,10 @@ export function PendingInviteModal() {
       });
       if (error) throw error;
       setInvites((prev) => prev.filter((i) => i.id !== invite.id));
+    } catch (err) {
+      setRespondError(
+        err instanceof Error ? err.message : "Något gick fel. Försök igen.",
+      );
     } finally {
       setBusy(false);
     }
@@ -106,6 +122,11 @@ export function PendingInviteModal() {
           dig att spela som <span className="font-semibold text-paper">{invite.playerName}</span>.
         </p>
         <p className="mt-1 text-sm text-paper-dim">{deviceText}</p>
+        {respondError && (
+          <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {respondError}
+          </p>
+        )}
         <div className="mt-5 flex gap-2">
           <button
             type="button"

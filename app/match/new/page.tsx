@@ -52,6 +52,14 @@ function InvitePicker({
   const [email, setEmail] = useState("");
 
   useEffect(() => {
+    // Same reasoning as the account list on the page below: don't fetch
+    // with an undefined (not-yet-resolved) currentUserId, or the signed-in
+    // account itself can end up in the results — see the comment on that
+    // effect for why racing two fetches instead isn't safe either. In
+    // practice this component is never mounted before auth resolves (it
+    // only appears once a player is checked in separate-devices mode), but
+    // guard it anyway rather than relying on that.
+    if (!currentUserId) return;
     listProfiles(currentUserId).then((profiles) => {
       setAllProfiles(profiles);
       setLoaded(true);
@@ -179,13 +187,15 @@ function InvitePicker({
 export default function NewMatchPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { players, load, createPlayer, localPlayerId, setPlayerAvatar } = usePlayersStore();
+  const { players, load, createPlayer, localPlayerId, setPlayerAvatar, linkPlayerToAccount } =
+    usePlayersStore();
   const [mode, setMode] = useState<MatchMode>("separate-devices");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [inviteTargets, setInviteTargets] = useState<Record<string, InviteTarget>>({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [newAvatarBlob, setNewAvatarBlob] = useState<Blob | null>(null);
   const [newAvatarPreview, setNewAvatarPreview] = useState<string | null>(null);
@@ -198,6 +208,12 @@ export default function NewMatchPage() {
   const [otherProfiles, setOtherProfiles] = useState<Profile[]>([]);
   const [addingAccountId, setAddingAccountId] = useState<string | null>(null);
   const [preSelectedProfiles, setPreSelectedProfiles] = useState<Record<string, Profile>>({});
+  const [accountError, setAccountError] = useState<string | null>(null);
+  // Collapsed by default — the account list can get long once more family
+  // members have signed up, and most matches don't need it at all (adding
+  // a fresh guest player is the common case), so it shouldn't shove that
+  // further down every time this picker opens.
+  const [accountsOpen, setAccountsOpen] = useState(false);
 
   useEffect(() => {
     load();
@@ -212,7 +228,16 @@ export default function NewMatchPage() {
   }, [players]);
 
   useEffect(() => {
-    listProfiles(user?.id).then(setOtherProfiles);
+    // Waits for the real user id rather than firing with undefined on the
+    // first render (auth resolves asynchronously, after this effect would
+    // otherwise already have fired) — an unauthenticated listProfiles()
+    // call can't exclude anyone and would list the signed-in account
+    // itself as someone to invite. Racing that first, unfiltered fetch
+    // against a second, correctly-excluded one (once user.id lands) isn't
+    // safe either: whichever response happens to arrive last wins, so a
+    // slow first request can still overwrite the correct list.
+    if (!user?.id) return;
+    listProfiles(user.id).then(setOtherProfiles);
   }, [user?.id]);
 
   function toggleSelect(id: string) {
@@ -239,11 +264,23 @@ export default function NewMatchPage() {
   async function handleSelectAccount(p: Profile) {
     if (addingAccountId) return;
     setAddingAccountId(p.userId);
+    setAccountError(null);
     try {
       const player = await createPlayer(p.username ?? "Spelare");
       setSelectedIds((prev) => [...prev, player.id]);
-      setInviteTargets((prev) => ({ ...prev, [player.id]: { userId: p.userId } }));
       setPreSelectedProfiles((prev) => ({ ...prev, [player.id]: p }));
+      if (mode === "shared-device") {
+        // Everyone's at the same screen in this mode, so there's no separate
+        // device to send an invite to and confirm from — being picked here
+        // already means they're sitting right here. Link the row to their
+        // real account immediately so this match's stats attribute to them,
+        // the same as if they'd played it on their own device.
+        await linkPlayerToAccount(player.id, p.userId);
+      } else {
+        setInviteTargets((prev) => ({ ...prev, [player.id]: { userId: p.userId } }));
+      }
+    } catch (err) {
+      setAccountError(err instanceof Error ? err.message : "Kunde inte lägga till kontot.");
     } finally {
       setAddingAccountId(null);
     }
@@ -252,7 +289,15 @@ export default function NewMatchPage() {
   function playerAvatarUrl(id: string): string | undefined {
     const p = players.find((x) => x.id === id);
     if (!p) return undefined;
-    return (p.linkedUserId ? profilesByUserId[p.linkedUserId]?.avatarUrl : undefined) ?? p.avatarUrl ?? undefined;
+    return (
+      (p.linkedUserId ? profilesByUserId[p.linkedUserId]?.avatarUrl : undefined) ??
+      // While the profilesByUserId fetch for a just-linked account is still
+      // in flight, fall back to the profile picked from the account list —
+      // avoids a flash of the initials placeholder for a split second.
+      preSelectedProfiles[id]?.avatarUrl ??
+      p.avatarUrl ??
+      undefined
+    );
   }
 
   async function handleNewAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -307,30 +352,64 @@ export default function NewMatchPage() {
     }
   }
 
+  // A player already linked to a real account (from an earlier accepted
+  // invite) doesn't need the InvitePicker filled in again — the app already
+  // knows exactly who they are. Falling back to inviteTargets means an
+  // explicit picker choice still wins if one was made anyway.
+  function resolveInviteTarget(playerId: string): InviteTarget | undefined {
+    if (inviteTargets[playerId]) return inviteTargets[playerId];
+    const linkedUserId = players.find((p) => p.id === playerId)?.linkedUserId;
+    return linkedUserId ? { userId: linkedUserId } : undefined;
+  }
+
   async function handleStart() {
     if (selectedIds.length < 1) return;
     setCreating(true);
-    const repos = getRepositories();
-    const match = await repos.matches.createMatch(mode, selectedIds);
-    if (mode === "separate-devices") {
-      await Promise.all(
-        selectedIds
-          .filter((id) => id !== localPlayerId && inviteTargets[id])
-          .map((id) =>
-            fetch("/api/invites", {
+    setStartError(null);
+    try {
+      const repos = getRepositories();
+      const match = await repos.matches.createMatch(mode, selectedIds);
+      if (mode === "separate-devices") {
+        // fetch() only rejects on network failure — it resolves normally for
+        // 4xx/5xx responses too, so each result must be checked explicitly.
+        // Otherwise a rejected/failed invite (e.g. a transient error) is
+        // silently swallowed and the recipient never sees a request, with no
+        // sign anything went wrong on the inviter's side either.
+        const targets = selectedIds
+          .filter((id) => id !== localPlayerId)
+          .map((id) => ({ id, target: resolveInviteTarget(id) }))
+          .filter((t): t is { id: string; target: InviteTarget } => !!t.target);
+        const results = await Promise.all(
+          targets.map(async ({ id, target }) => {
+            const res = await fetch("/api/invites", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 matchId: match.id,
                 playerId: id,
-                invitedUserId: inviteTargets[id].userId,
-                invitedEmail: inviteTargets[id].email,
+                invitedUserId: target.userId,
+                invitedEmail: target.email,
               }),
-            }),
-          ),
-      );
+            });
+            if (res.ok) return { id, ok: true as const };
+            const data = await res.json().catch(() => ({}));
+            return { id, ok: false as const, error: data?.error as string | undefined };
+          }),
+        );
+        const failed = results.filter((r) => !r.ok);
+        if (failed.length > 0) {
+          const names = failed
+            .map((f) => players.find((p) => p.id === f.id)?.name ?? "spelare")
+            .join(", ");
+          setStartError(`Kunde inte bjuda in: ${names}. Matchen skapades ändå.`);
+        }
+      }
+      router.push(`/match/${match.id}`);
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : "Kunde inte starta matchen.");
+    } finally {
+      setCreating(false);
     }
-    router.push(`/match/${match.id}`);
   }
 
   const selectedNames = selectedIds
@@ -400,7 +479,11 @@ export default function NewMatchPage() {
               {players.map((p) => {
                 const isSelf = p.id === localPlayerId;
                 const isSelected = selectedIds.includes(p.id);
-                const showInvite = mode === "separate-devices" && isSelected && !isSelf;
+                // Already-linked players don't need the picker — there's
+                // nothing to pick, resolveInviteTarget already knows who
+                // they are from their own linkedUserId.
+                const showInvite =
+                  mode === "separate-devices" && isSelected && !isSelf && !p.linkedUserId;
                 const avatarUrl = playerAvatarUrl(p.id);
                 return (
                   <div
@@ -424,6 +507,13 @@ export default function NewMatchPage() {
                       </div>
                       <span>{p.name}</span>
                       {isSelf && <span className="ml-auto text-xs text-muted">Du</span>}
+                      {!isSelf && p.linkedUserId && (
+                        <span className="ml-auto text-xs text-muted">
+                          {isSelected && mode === "separate-devices"
+                            ? "Kopplat konto · bjuds in automatiskt"
+                            : "Kopplat konto"}
+                        </span>
+                      )}
                     </label>
                     {showInvite && (
                       <InvitePicker
@@ -448,33 +538,45 @@ export default function NewMatchPage() {
               )}
             </div>
 
-            {mode === "separate-devices" && invitableProfiles.length > 0 && (
+            {invitableProfiles.length > 0 && (
               <div className="mt-3 border-t border-white/10 pt-3">
-                <p className="mb-1.5 text-[10px] font-extrabold tracking-[.2em] text-sage">
-                  BJUD IN
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {invitableProfiles.map((p) => (
-                    <button
-                      key={p.userId}
-                      type="button"
-                      disabled={addingAccountId === p.userId}
-                      onClick={() => handleSelectAccount(p)}
-                      className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper disabled:opacity-60"
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
-                        {p.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.avatarUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          avatarInitials(p.username)
-                        )}
-                      </div>
-                      <span className="flex-1">{p.username}</span>
-                      <span className="text-xs text-gold-bright">Bjud in</span>
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setAccountsOpen((o) => !o)}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <span className="text-[10px] font-extrabold tracking-[.2em] text-sage">
+                    {mode === "separate-devices" ? "BJUD IN" : "LÄGG TILL KONTO"}
+                  </span>
+                  <span className="text-xs text-paper-dim">{accountsOpen ? "▲" : "▼"}</span>
+                </button>
+                {accountsOpen && (
+                  <div className="mt-1.5 flex flex-col gap-1.5">
+                    {invitableProfiles.map((p) => (
+                      <button
+                        key={p.userId}
+                        type="button"
+                        disabled={addingAccountId === p.userId}
+                        onClick={() => handleSelectAccount(p)}
+                        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper disabled:opacity-60"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
+                          {p.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.avatarUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            avatarInitials(p.username)
+                          )}
+                        </div>
+                        <span className="flex-1">{p.username}</span>
+                        <span className="text-xs text-gold-bright">
+                          {mode === "separate-devices" ? "Bjud in" : "Lägg till"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {accountError && <p className="mt-1.5 text-xs text-red-400">{accountError}</p>}
               </div>
             )}
 
@@ -528,6 +630,12 @@ export default function NewMatchPage() {
           </div>
         )}
       </div>
+
+      {startError && (
+        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+          {startError}
+        </p>
+      )}
 
       <button
         type="button"

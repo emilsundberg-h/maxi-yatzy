@@ -10,6 +10,8 @@ interface PlayersStoreState {
   load: () => Promise<void>;
   createPlayer: (name: string) => Promise<Player>;
   renamePlayer: (playerId: string, name: string) => Promise<void>;
+  linkPlayerToAccount: (playerId: string, userId: string) => Promise<void>;
+  deletePlayer: (playerId: string) => Promise<void>;
   setLocalPlayerId: (id: string) => Promise<void>;
   setPlayerAvatar: (playerId: string, avatarUrl: string) => void;
 }
@@ -44,6 +46,22 @@ export const usePlayersStore = create<PlayersStoreState>((set, get) => ({
     set({
       players: get().players.map((p) => (p.id === playerId ? { ...p, name } : p)),
     });
+  },
+
+  async linkPlayerToAccount(playerId: string, userId: string) {
+    const repos = getRepositories();
+    await repos.players.linkPlayerToAccount(playerId, userId);
+    set({
+      players: get().players.map((p) =>
+        p.id === playerId ? { ...p, linkedUserId: userId } : p,
+      ),
+    });
+  },
+
+  async deletePlayer(playerId: string) {
+    const repos = getRepositories();
+    await repos.players.deletePlayer(playerId);
+    set({ players: get().players.filter((p) => p.id !== playerId) });
   },
 
   async setLocalPlayerId(id: string) {

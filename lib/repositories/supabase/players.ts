@@ -46,4 +46,26 @@ export class SupabasePlayerRepository implements PlayerRepository {
     const { error } = await supabase.from("players").update({ name }).eq("id", id);
     if (error) throw error;
   }
+
+  // The players_update RLS policy only requires owner_user_id = auth.uid()
+  // (see supabase/migrations/0001_init.sql) — the same grant renamePlayer
+  // above relies on — so the owner can already point linked_user_id at any
+  // account this way. No new server-side RPC needed.
+  async linkPlayerToAccount(id: string, userId: string): Promise<void> {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase
+      .from("players")
+      .update({ linked_user_id: userId })
+      .eq("id", id);
+    if (error) throw error;
+  }
+
+  // Needs supabase/migrations/0010_players_delete.sql — players never had a
+  // DELETE policy (only select/insert/update), so this 403s until that's
+  // applied.
+  async deletePlayer(id: string): Promise<void> {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.from("players").delete().eq("id", id);
+    if (error) throw error;
+  }
 }
