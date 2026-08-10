@@ -133,22 +133,24 @@ export function ScorecardGrid({
               </span>
             )}
             {/* The whole hit target should read as one label, not a tag
-                floating inside a separate box — so this pill is fully
-                rounded (stadium-shaped) and padded to fill most of the
-                cell itself, with nothing else behind it. Colored to signal
-                outcome at a glance — flat gold for points, a dull flat red
-                for a category that would score zero right now (matches the
-                design's flat colors, not the app's usual gold gradient —
-                that's the point of this pass). Arming it (first tap) grows
-                the pill and adds a gold halo so the "tap again to confirm"
-                cue stays with the number itself. No vertical padding and
+                floating inside a separate box — so this pill is padded to
+                fill most of the cell itself, with nothing else behind it.
+                Colored to signal outcome at a glance — flat gold for
+                points, a dull flat red for a category that would score
+                zero right now (matches the design's flat colors, not the
+                app's usual gold gradient). Arming it (first tap) grows the
+                pill more noticeably and rings it with a solid border — a
+                clear "tap again to confirm" cue on the number itself, not
+                just a soft glow easy to miss. No vertical padding and
                 leading-none: this sits inside the same py-1 button as a
                 plain filled/placeholder cell, so it must fit that exact
                 line height, or every row grows the moment it's your turn
                 and shrinks back the moment it isn't. */}
             <span
-              className={`inline-flex min-w-[2.1em] items-center justify-center rounded-full px-2 py-0.5 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
-                armed ? "scale-[1.18] shadow-[0_0_0_4px_rgba(223,185,85,.35)]" : "scale-100"
+              className={`inline-flex min-w-[2.1em] items-center justify-center rounded-[10px] border-2 px-2 py-0.5 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+                armed
+                  ? "scale-[1.32] border-[#f2ecd9] shadow-[0_0_0_4px_rgba(223,185,85,.35)]"
+                  : "scale-100 border-transparent"
               } ${
                 (preview ?? 0) > 0
                   ? "bg-[#dfb955] text-[#2a2103]"
