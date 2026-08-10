@@ -105,13 +105,12 @@ export function ScorecardGrid({
         onClick={handleClick}
         aria-label={armed ? `${CATEGORY_LABELS[categoryId]}: tryck igen för att låsa` : undefined}
         className={`relative border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
-          // A translucent tint spanning the whole cell behind the pill read
-          // as a label sitting inside a box, not as a label in its own
-          // right — so the active-column wash only applies where there's no
-          // pill to carry that signal itself (locked cells, or this column
-          // before dice have been rolled).
-          !clickable && isActiveCol ? "bg-gold/10" : ""
-        } ${
+          // No background wash on the cell itself, clickable or not — the
+          // design's cells are always plain (fully transparent, no matter
+          // whose column or locked/unlocked) and let the pill or the plain
+          // locked number be the only colored thing on the row. A tint on
+          // some cells and not others read as two different visual systems
+          // (boxed rows vs. free-floating labels) instead of one.
           clickable
             ? "cursor-pointer"
             : filled !== undefined
