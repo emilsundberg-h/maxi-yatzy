@@ -105,12 +105,12 @@ export function ScorecardGrid({
         onClick={handleClick}
         aria-label={armed ? `${CATEGORY_LABELS[categoryId]}: tryck igen för att låsa` : undefined}
         className={`relative border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
-          armed ? "bg-gold/20" : isActiveCol ? "bg-gold/10" : ""
+          armed ? "bg-[rgba(223,185,85,.08)]" : isActiveCol ? "bg-gold/10" : ""
         } ${
           clickable
             ? "cursor-pointer hover:bg-gold/10"
             : filled !== undefined
-              ? "font-semibold text-paper"
+              ? "font-bold text-paper"
               : "cursor-default text-[#5d6b62]"
         }`}
       >
@@ -129,22 +129,24 @@ export function ScorecardGrid({
               </span>
             )}
             {/* The label: a little tag marking "this is what you'd score
-                here", colored to signal outcome at a glance — gold for
-                points, a dull red for a category that would score zero
-                right now. Arming it (first tap) grows the tag and adds a
-                gold halo so the "tap again to confirm" cue stays with the
-                number instead of taking over the row. No vertical padding
-                and leading-none: this sits inside the same py-1 button as a
-                plain filled/placeholder cell, so it must fit that exact
-                line height, or every row grows the moment it's your turn
-                and shrinks back the moment it isn't. */}
+                here", colored to signal outcome at a glance — flat gold for
+                points, a dull flat red for a category that would score zero
+                right now (colors and radius match the design 1:1, not the
+                app's usual gold gradient — that's the point of this pass).
+                Arming it (first tap) grows the tag and adds a gold halo so
+                the "tap again to confirm" cue stays with the number instead
+                of taking over the row. No vertical padding and leading-none:
+                this sits inside the same py-1 button as a plain
+                filled/placeholder cell, so it must fit that exact line
+                height, or every row grows the moment it's your turn and
+                shrinks back the moment it isn't. */}
             <span
-              className={`inline-flex min-w-[1.9em] items-center justify-center rounded px-1.5 py-0 text-[12px] leading-none font-extrabold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
+              className={`inline-flex min-w-[1.9em] items-center justify-center rounded-[10px] px-1.5 py-0 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-transform duration-150 ${
                 armed ? "scale-[1.22] shadow-[0_0_0_4px_rgba(223,185,85,.35)]" : "scale-100"
               } ${
                 (preview ?? 0) > 0
-                  ? "bg-gradient-to-br from-[#eecb7c] to-[#b98d38] text-[#241708]"
-                  : "bg-[#5c2a2a] text-[#e8b9b9]"
+                  ? "bg-[#dfb955] text-[#2a2103]"
+                  : "bg-[#5b3838] text-[#d9b7b7]"
               }`}
             >
               {text}
