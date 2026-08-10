@@ -201,6 +201,11 @@ export default function NewMatchPage() {
   const [addingAccountId, setAddingAccountId] = useState<string | null>(null);
   const [preSelectedProfiles, setPreSelectedProfiles] = useState<Record<string, Profile>>({});
   const [accountError, setAccountError] = useState<string | null>(null);
+  // Collapsed by default — the account list can get long once more family
+  // members have signed up, and most matches don't need it at all (adding
+  // a fresh guest player is the common case), so it shouldn't shove that
+  // further down every time this picker opens.
+  const [accountsOpen, setAccountsOpen] = useState(false);
 
   useEffect(() => {
     load();
@@ -497,33 +502,42 @@ export default function NewMatchPage() {
 
             {invitableProfiles.length > 0 && (
               <div className="mt-3 border-t border-white/10 pt-3">
-                <p className="mb-1.5 text-[10px] font-extrabold tracking-[.2em] text-sage">
-                  {mode === "separate-devices" ? "BJUD IN" : "LÄGG TILL KONTO"}
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {invitableProfiles.map((p) => (
-                    <button
-                      key={p.userId}
-                      type="button"
-                      disabled={addingAccountId === p.userId}
-                      onClick={() => handleSelectAccount(p)}
-                      className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper disabled:opacity-60"
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
-                        {p.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.avatarUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          avatarInitials(p.username)
-                        )}
-                      </div>
-                      <span className="flex-1">{p.username}</span>
-                      <span className="text-xs text-gold-bright">
-                        {mode === "separate-devices" ? "Bjud in" : "Lägg till"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setAccountsOpen((o) => !o)}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <span className="text-[10px] font-extrabold tracking-[.2em] text-sage">
+                    {mode === "separate-devices" ? "BJUD IN" : "LÄGG TILL KONTO"}
+                  </span>
+                  <span className="text-xs text-paper-dim">{accountsOpen ? "▲" : "▼"}</span>
+                </button>
+                {accountsOpen && (
+                  <div className="mt-1.5 flex flex-col gap-1.5">
+                    {invitableProfiles.map((p) => (
+                      <button
+                        key={p.userId}
+                        type="button"
+                        disabled={addingAccountId === p.userId}
+                        onClick={() => handleSelectAccount(p)}
+                        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper disabled:opacity-60"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
+                          {p.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.avatarUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            avatarInitials(p.username)
+                          )}
+                        </div>
+                        <span className="flex-1">{p.username}</span>
+                        <span className="text-xs text-gold-bright">
+                          {mode === "separate-devices" ? "Bjud in" : "Lägg till"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {accountError && <p className="mt-1.5 text-xs text-red-400">{accountError}</p>}
               </div>
             )}
