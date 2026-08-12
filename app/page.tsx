@@ -230,10 +230,10 @@ export default function DashboardPage() {
               Ranking
             </Link>
             <Link
-              href="/players"
+              href="/profile"
               className="rounded-full border border-gold/20 bg-white/5 px-3 py-1.5 text-paper-dim hover:border-gold/40"
             >
-              Spelare
+              Min profil
             </Link>
           </nav>
         </div>
