@@ -263,7 +263,12 @@ export default function MatchPage() {
         )}
       </div>
 
-      <div className="sticky top-2 flex w-[112px] flex-none flex-col items-center gap-3 rounded-2xl border border-gold/15 bg-surface px-2 pt-2 pb-3 sm:w-[140px] sm:px-3">
+      {/* No fill here (unlike the scorecard panel) — this panel doesn't sit
+          over scrolling content that needs occluding, so it's free to stay
+          transparent and let the page's own background (incl. a theme's
+          backdrop texture, e.g. Kollegieblock's graph paper) show through
+          behind the dice instead of being hidden under an opaque card. */}
+      <div className="sticky top-2 flex w-[112px] flex-none flex-col items-center gap-3 rounded-2xl border border-gold/15 px-2 pt-2 pb-3 sm:w-[140px] sm:px-3">
         <Link
           href="/"
           className="flex h-7 w-7 shrink-0 items-center justify-center self-start rounded-full border border-gold/25 bg-surface text-sm text-gold-bright"

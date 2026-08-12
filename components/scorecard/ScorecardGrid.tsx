@@ -264,7 +264,12 @@ export function ScorecardGrid({
             <Row
               key={id}
               label={
-                <div className="px-2 py-1 text-[13px] text-paper-dim">{CATEGORY_LABELS[id]}</div>
+                <div
+                  className="px-2 py-1 text-paper-dim"
+                  style={{ fontFamily: "var(--font-label)", fontSize: "var(--label-font-size)" }}
+                >
+                  {CATEGORY_LABELS[id]}
+                </div>
               }
               cells={orderedPlayerIds.map((playerId) => categoryCell(id, playerId))}
             />
@@ -272,7 +277,12 @@ export function ScorecardGrid({
 
           <Row
             label={
-              <div className="px-2 py-1 text-[11px] font-medium text-paper-dim">Summa övre</div>
+              <div
+                className="px-2 py-1 font-medium text-paper-dim"
+                style={{ fontFamily: "var(--font-label)", fontSize: "var(--label-font-size)" }}
+              >
+                Summa övre
+              </div>
             }
             cells={orderedPlayerIds.map((id) =>
               numberCell(id, upperSum(mpByPlayer.get(id)!.scores)),
@@ -303,7 +313,12 @@ export function ScorecardGrid({
             <Row
               key={id}
               label={
-                <div className="px-2 py-1 text-[13px] text-paper-dim">{CATEGORY_LABELS[id]}</div>
+                <div
+                  className="px-2 py-1 text-paper-dim"
+                  style={{ fontFamily: "var(--font-label)", fontSize: "var(--label-font-size)" }}
+                >
+                  {CATEGORY_LABELS[id]}
+                </div>
               }
               cells={orderedPlayerIds.map((playerId) => categoryCell(id, playerId))}
             />

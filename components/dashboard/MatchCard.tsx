@@ -50,6 +50,10 @@ export function MatchCard({
     !isCompleted &&
     (match.mode === "shared-device" || playerBelongsToUser(players[activePlayerId], currentUserId));
   const progress = Math.min(1, (match.currentTurnNumber - 1) / ALL_CATEGORY_IDS.length);
+  const cardTint =
+    isYourTurn && !isCompleted
+      ? "color-mix(in srgb, var(--color-gold) 10%, var(--color-surface))"
+      : "var(--color-surface)";
 
   // Swiping only ever reveals the "TA BORT" button — it never deletes
   // anything by itself. Snaps to whichever of the two resting positions
@@ -117,12 +121,13 @@ export function MatchCard({
           // identical against the page while actually blocking what's
           // behind it — only the sliver the card has been dragged clear of
           // shows red. Light themes' surface is already opaque, so the
-          // backing layer is a no-op there.
-          background: `${
-            isYourTurn && !isCompleted
-              ? "color-mix(in srgb, var(--color-gold) 10%, var(--color-surface))"
-              : "var(--color-surface)"
-          }, var(--color-felt-deep)`,
+          // backing layer is a no-op there. The tint itself has to be
+          // wrapped in linear-gradient(...) — `background` shorthand only
+          // allows a bare color as its *last* comma-separated layer, so two
+          // bare colors here is invalid and silently drops the whole
+          // declaration, which is exactly what let "TA BORT" show through
+          // at rest instead of only once dragged clear.
+          background: `linear-gradient(${cardTint}, ${cardTint}), var(--color-felt-deep)`,
         }}
       >
         <span

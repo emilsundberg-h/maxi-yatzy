@@ -67,6 +67,13 @@
   /* Kollegieblock's graph-paper backdrop; every other theme leaves this off. */
   --overlay-image: none;
   --overlay-opacity: 0;
+  /* Scorecard row/category labels ("Ettor", "Summa övre", ...) — plain body
+     font by default. Kollegieblock overrides this to its handwritten
+     Caveat font (with a larger size — Caveat is illegible this small) to
+     read like notes jotted in the margin of the notebook, matching the
+     handwritten headings elsewhere in that theme. */
+  --font-label: var(--font-sans);
+  --label-font-size: 13px;
 }
 
 /* ---- Bauhaus ---- */
@@ -121,6 +128,8 @@ html[data-theme="kollegie"] {
     repeating-linear-gradient(180deg, rgba(120, 150, 200, 0.3) 0 1px, transparent 1px 26px),
     repeating-linear-gradient(90deg, rgba(120, 150, 200, 0.16) 0 1px, transparent 1px 26px);
   --overlay-opacity: 1;
+  --font-label: var(--font-caveat), "Caveat", cursive;
+  --label-font-size: 16px;
 }
 
 /* ---- Pastell ---- */
