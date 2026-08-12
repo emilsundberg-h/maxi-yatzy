@@ -17,6 +17,10 @@ import { usePlayersStore } from "@/lib/store/usePlayersStore";
 
 const COMPLETED_MATCH_VISIBLE_MS = 2 * 24 * 60 * 60 * 1000;
 
+function initials(text: string): string {
+  return text.trim().slice(0, 2).toUpperCase() || "?";
+}
+
 export default function DashboardPage() {
   const authLoading = useAuthStore((s) => s.loading);
   const currentUser = useAuthStore((s) => s.user);
@@ -127,6 +131,12 @@ export default function DashboardPage() {
     ...extraPlayersById,
     ...Object.fromEntries(players.map((p) => [p.id, p])),
   };
+  // Own profile piggybacks on the same profilesByUserId fetch above — the
+  // self player row ensureSelfPlayer creates on login is always part of
+  // `players`, so its linkedUserId (this account's own id) is already
+  // included in that effect's fetch once players has loaded.
+  const myProfile = currentUser ? profilesByUserId[currentUser.id] : undefined;
+  const myAvatarUrl = myProfile?.avatarUrl ?? undefined;
 
   async function handleForfeit() {
     const match = pendingDeleteMatch;
@@ -222,18 +232,25 @@ export default function DashboardPage() {
             </div>
             <h1 className="font-serif text-3xl font-semibold text-paper">Mina matcher</h1>
           </div>
-          <nav className="flex gap-2 text-xs font-semibold">
+          <nav className="flex items-center gap-2">
             <Link
               href="/ranking"
-              className="rounded-full border border-gold/20 bg-surface px-3 py-1.5 text-paper-dim hover:border-gold/40"
+              aria-label="Ranking"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-gold/20 bg-surface text-base text-gold-bright hover:border-gold/40"
             >
-              Ranking
+              ♛
             </Link>
             <Link
               href="/profile"
-              className="rounded-full border border-gold/20 bg-surface px-3 py-1.5 text-paper-dim hover:border-gold/40"
+              aria-label="Min profil"
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-gold/20 bg-surface text-[10px] font-bold text-paper-dim hover:border-gold/40"
             >
-              Min profil
+              {myAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={myAvatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initials(myProfile?.username || currentUser?.email || "?")
+              )}
             </Link>
           </nav>
         </div>
