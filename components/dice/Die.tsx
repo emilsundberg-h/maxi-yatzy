@@ -13,7 +13,10 @@ const PIP_MAPS: Record<DieValue, number[]> = {
   6: [0, 2, 3, 5, 6, 8],
 };
 
-const GOLD = "#c9a959";
+// Ties the lock-ring glow to the current theme's accent color. The die's
+// face/pip colors stay a constant cream/black in every theme — dice keep
+// looking like physical ivory dice regardless of the felt color around them.
+const GOLD = "var(--color-gold-bright)";
 
 // Each face keeps a fixed value/pip pattern (opposite faces sum to 7, like a
 // real die) and never changes. Rolling only rotates the cube itself so a

@@ -31,10 +31,10 @@ export function RollControls({
         type="button"
         onClick={onRoll}
         disabled={!canRoll}
-        className="flex w-full flex-col items-center gap-0.5 rounded-xl px-1.5 py-2 text-[10px] font-extrabold tracking-[.04em] text-[#241708] shadow-[0_10px_20px_rgba(0,0,0,.4),inset_0_2px_0_rgba(255,255,255,.45)] transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex w-full flex-col items-center gap-0.5 rounded-xl px-1.5 py-2 text-[10px] font-extrabold tracking-[.04em] text-[var(--color-ink)] shadow-[0_10px_20px_rgba(0,0,0,.4),inset_0_2px_0_rgba(255,255,255,.45)] transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         style={{
           background: canRoll
-            ? "linear-gradient(150deg,#eecb7c,#b98d38)"
+            ? "var(--color-accent-grad)"
             : "linear-gradient(150deg,#8a8577,#5f5a4f)",
         }}
       >

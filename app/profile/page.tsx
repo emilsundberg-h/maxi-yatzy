@@ -15,6 +15,8 @@ import {
 import { getProfile, updateUsername, type Profile } from "@/lib/supabase/profiles";
 import { useAuthStore } from "@/lib/store/useAuthStore";
 import { usePlayersStore } from "@/lib/store/usePlayersStore";
+import { useThemeStore } from "@/lib/store/useThemeStore";
+import { THEME_IDS, THEMES } from "@/lib/theme/themes";
 
 function initials(text: string): string {
   return text.trim().slice(0, 2).toUpperCase() || "?";
@@ -23,6 +25,7 @@ function initials(text: string): string {
 export default function ProfilePage() {
   const { user } = useAuthStore();
   const { players, load: loadPlayers, renamePlayer } = usePlayersStore();
+  const { theme, setTheme } = useThemeStore();
   const [profile, setProfile] = useState<Profile | undefined>();
   const [username, setUsername] = useState("");
   const [savingUsername, setSavingUsername] = useState(false);
@@ -152,7 +155,7 @@ export default function ProfilePage() {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadingAvatar}
-          className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-gold/30 bg-white/10 text-2xl font-extrabold text-paper-dim disabled:opacity-60"
+          className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-gold/30 bg-surface text-2xl font-extrabold text-paper-dim disabled:opacity-60"
         >
           {profile?.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -192,13 +195,13 @@ export default function ProfilePage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Ditt användarnamn"
-            className="flex-1 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-paper placeholder:text-muted-dim"
+            className="flex-1 rounded-xl border border-line bg-surface px-3 py-2.5 text-paper placeholder:text-muted-dim"
           />
           <button
             type="button"
             onClick={handleSaveUsername}
             disabled={savingUsername || !username.trim()}
-            className="rounded-xl border border-gold/25 bg-white/5 px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
+            className="rounded-xl border border-gold/25 bg-surface px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
           >
             Spara
           </button>
@@ -207,7 +210,35 @@ export default function ProfilePage() {
         <p className="mt-1 text-xs text-muted">Andra kan hitta och bjuda in dig via det här namnet.</p>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div>
+        <p className="mb-2 text-[10px] font-extrabold tracking-[.2em] text-sage">FÄRGTEMA</p>
+        <div className="flex flex-wrap gap-2">
+          {THEME_IDS.map((id) => {
+            const active = id === theme;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTheme(id)}
+                aria-pressed={active}
+                className={`flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-xs font-semibold transition-colors ${
+                  active
+                    ? "border-gold bg-gold/15 text-paper"
+                    : "border-line bg-surface text-paper-dim"
+                }`}
+              >
+                <span
+                  className="h-5 w-5 rounded-full border border-black/10"
+                  style={{ background: THEMES[id].dot }}
+                />
+                {THEMES[id].name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-line bg-surface p-4">
         <p className="mb-1 text-[10px] font-extrabold tracking-[.2em] text-sage">NOTISER</p>
         {!pushSupported ? (
           <p className="text-sm text-muted">Push-notiser stöds inte i den här webbläsaren.</p>
@@ -223,12 +254,12 @@ export default function ProfilePage() {
               type="button"
               onClick={handleTogglePush}
               disabled={pushBusy || pushPermission === "denied"}
-              className="w-full rounded-xl px-4 py-2.5 font-semibold text-[#241708] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl px-4 py-2.5 font-semibold text-[var(--color-ink)] disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 background: pushSubscribed
                   ? "rgba(255,255,255,.08)"
-                  : "linear-gradient(150deg,#eecb7c,#b98d38)",
-                color: pushSubscribed ? "var(--color-paper)" : "#241708",
+                  : "var(--color-accent-grad)",
+                color: pushSubscribed ? "var(--color-paper)" : "var(--color-ink)",
               }}
             >
               {pushSubscribed ? "Stäng av notiser" : "Slå på notiser"}

@@ -45,7 +45,7 @@ export function ActivityFeed({ events, players }: ActivityFeedProps) {
   const recent = [...events].reverse().slice(0, 12);
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-gold/15 bg-black/25 p-4 text-sm">
+    <div className="w-full max-w-sm rounded-2xl border border-gold/15 bg-surface p-4 text-sm">
       <h4 className="mb-2 text-[10px] font-extrabold tracking-[.24em] text-sage">
         AKTIVITET
       </h4>

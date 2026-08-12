@@ -112,7 +112,7 @@ export function PendingInviteModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
-      <div className="w-full max-w-sm rounded-2xl border border-gold/25 bg-[#1a1410] p-6 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+      <div className="w-full max-w-sm rounded-2xl border border-gold/25 bg-[var(--color-panel)] p-6 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
         <div className="mb-1 text-[10px] font-extrabold tracking-[.28em] text-gold">
           MAXI YATZY
         </div>
@@ -132,7 +132,7 @@ export function PendingInviteModal() {
             type="button"
             onClick={() => respond(false)}
             disabled={busy}
-            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-semibold text-paper-dim disabled:opacity-60"
+            className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 font-semibold text-paper-dim disabled:opacity-60"
           >
             Avslå
           </button>
@@ -140,8 +140,8 @@ export function PendingInviteModal() {
             type="button"
             onClick={() => respond(true)}
             disabled={busy}
-            className="flex-1 rounded-xl px-4 py-2.5 font-extrabold text-[#241708] disabled:opacity-60"
-            style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+            className="flex-1 rounded-xl px-4 py-2.5 font-extrabold text-[var(--color-ink)] disabled:opacity-60"
+            style={{ background: "var(--color-accent-grad)" }}
           >
             Godkänn
           </button>

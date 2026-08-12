@@ -1,7 +1,21 @@
 @import "tailwindcss";
 
+/*
+ * Färgteman (color themes)
+ * ------------------------
+ * Every color/radius/font below is a real CSS custom property (that's how
+ * Tailwind v4's `@theme` values work — `bg-gold` compiles to
+ * `background-color: var(--color-gold)`, `rounded-xl` to
+ * `border-radius: var(--radius-xl)`, etc). This block defines the "skog"
+ * (forest, current/default) values — unchanged from before. Further down,
+ * `html[data-theme="..."]` blocks override the same variable names for each
+ * other theme, which re-skins every utility class using them app-wide with
+ * no per-component changes needed. `<html data-theme>` is set by
+ * `lib/store/useThemeStore.ts` (persisted per account) and by the no-flash
+ * inline script in `app/layout.tsx`.
+ */
 @theme {
-  --color-ink: #070808;
+  --color-ink: #241708;
   --color-felt-deep: #071f16;
   --color-felt-mid: #0f3a2b;
   --color-felt-bright: #1c5d45;
@@ -13,6 +27,13 @@
   --color-muted: #8f887a;
   --color-muted-dim: #6f6a5e;
   --color-sage: #7e9082;
+  /* Generic translucent card/input fill and its opaque scorecard-panel
+     sibling — see the theme blocks below for why these two diverge only
+     for "skog" (a translucent wash works on a dark page; the light themes
+     need an opaque surface to read as a card at all). */
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-panel: #0a1712;
+  --color-line: rgba(255, 255, 255, 0.1);
 
   --font-serif: var(--font-cormorant), "Cormorant Garamond", serif;
   --font-sans: var(--font-manrope), "Manrope", sans-serif;
@@ -32,26 +53,167 @@
   }
 }
 
+/* The primary gold/accent CTA gradient (buttons) and a lighter "muted"
+   variant (secondary selected state) are derived once from the accent
+   tokens above rather than repeated as literal gradients in every
+   component — they follow gold/gold-deep automatically in every theme. */
+:root {
+  --color-accent-grad: linear-gradient(150deg, var(--color-gold-bright), var(--color-gold-deep));
+  --color-accent-grad-muted: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--color-gold-bright) 55%, white),
+    color-mix(in srgb, var(--color-gold-deep) 55%, white)
+  );
+  /* Kollegieblock's graph-paper backdrop; every other theme leaves this off. */
+  --overlay-image: none;
+  --overlay-opacity: 0;
+}
+
+/* ---- Bauhaus ---- */
+html[data-theme="bauhaus"] {
+  --color-felt-deep: #f0ece1;
+  --color-felt-mid: #f0ece1;
+  --color-felt-bright: #f0ece1;
+  --color-gold: #d62828;
+  --color-gold-bright: #d62828;
+  --color-gold-deep: color-mix(in srgb, #d62828 72%, black);
+  --color-ink: #ffffff;
+  --color-paper: #141414;
+  --color-paper-dim: #6d6862;
+  --color-muted: #6d6862;
+  --color-muted-dim: #6d6862;
+  --color-sage: #6d6862;
+  --color-surface: #ffffff;
+  --color-panel: #ffffff;
+  --color-line: #141414;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --font-serif: var(--font-archivo-black), "Archivo Black", sans-serif;
+  --font-sans: var(--font-archivo), "Archivo", sans-serif;
+}
+
+/* ---- Kollegieblock ---- */
+html[data-theme="kollegie"] {
+  --color-felt-deep: #fcfbf5;
+  --color-felt-mid: #fcfbf5;
+  --color-felt-bright: #fcfbf5;
+  --color-gold: #d94436;
+  --color-gold-bright: #d94436;
+  --color-gold-deep: color-mix(in srgb, #d94436 72%, black);
+  --color-ink: #fffdf7;
+  --color-paper: #22305c;
+  --color-paper-dim: #7b8ab0;
+  --color-muted: #7b8ab0;
+  --color-muted-dim: #7b8ab0;
+  --color-sage: #7b8ab0;
+  --color-surface: #fdfcf8;
+  --color-panel: #fdfcf8;
+  --color-line: rgba(80, 110, 165, 0.28);
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
+  --font-serif: var(--font-caveat), "Caveat", cursive;
+  --font-sans: var(--font-manrope), "Manrope", sans-serif;
+  --overlay-image:
+    repeating-linear-gradient(180deg, rgba(120, 150, 200, 0.3) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(120, 150, 200, 0.16) 0 1px, transparent 1px 26px);
+  --overlay-opacity: 1;
+}
+
+/* ---- Pastell ---- */
+html[data-theme="pastell"] {
+  --color-felt-bright: #fdf1f5;
+  --color-felt-mid: #f3f0fb;
+  --color-felt-deep: #eaf6f4;
+  --color-gold: #c48fb4;
+  --color-gold-bright: #c48fb4;
+  --color-gold-deep: color-mix(in srgb, #c48fb4 72%, black);
+  --color-ink: #4d4458;
+  --color-paper: #4d4458;
+  --color-paper-dim: #9f95ab;
+  --color-muted: #9f95ab;
+  --color-muted-dim: #9f95ab;
+  --color-sage: #9f95ab;
+  --color-surface: #ffffff;
+  --color-panel: #ffffff;
+  --color-line: #ece2ee;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 22px;
+  --font-serif: var(--font-quicksand), "Quicksand", sans-serif;
+  --font-sans: var(--font-quicksand), "Quicksand", sans-serif;
+}
+
+/* ---- Greige ---- */
+html[data-theme="greige"] {
+  --color-felt-deep: #e6e2da;
+  --color-felt-mid: #e6e2da;
+  --color-felt-bright: #e6e2da;
+  --color-gold: #8a7f6d;
+  --color-gold-bright: #8a7f6d;
+  --color-gold-deep: color-mix(in srgb, #8a7f6d 72%, black);
+  --color-ink: #f4f1ec;
+  --color-paper: #2b2823;
+  --color-paper-dim: #8b8377;
+  --color-muted: #8b8377;
+  --color-muted-dim: #8b8377;
+  --color-sage: #8b8377;
+  --color-surface: #f4f1ec;
+  --color-panel: #f4f1ec;
+  --color-line: #d3cdc2;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 10px;
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", serif;
+  --font-sans: var(--font-jost), "Jost", sans-serif;
+}
+
 html,
 body {
   min-height: 100%;
   min-height: 100dvh;
-  /* iOS standalone PWAs paint the safe-area/overscroll strip (e.g. behind the
-     home indicator) using the flat background-color, not background-image —
-     so the gradient alone leaves that strip transparent (white). */
-  background-color: #071f16;
-  background-image: radial-gradient(
-    135% 95% at 50% -10%,
-    #1c5d45 0%,
-    #0f3a2b 46%,
-    #071f16 100%
-  );
   color: var(--color-paper);
   overscroll-behavior-y: none;
 }
 
+/* Background lives on <html> only, not <body> — a same background on both
+   would (per how backgrounds propagate to the canvas) make body paint its
+   *own* opaque copy of it directly above body::before's themed backdrop
+   texture below, hiding that texture completely no matter its z-index.
+   <html>'s background alone still becomes the canvas background, which is
+   what iOS standalone PWAs paint behind safe areas (home indicator,
+   overscroll) — background-color specifically, background-image alone
+   leaves that strip transparent. */
+html {
+  background-color: var(--color-felt-deep);
+  background-image: radial-gradient(
+    135% 95% at 50% -10%,
+    var(--color-felt-bright) 0%,
+    var(--color-felt-mid) 46%,
+    var(--color-felt-deep) 100%
+  );
+}
+
 body {
   font-family: var(--font-sans);
+  position: relative;
+}
+
+/* Theme backdrop texture (currently only Kollegieblock's graph paper) — a
+   fixed full-viewport layer behind everything, off by default. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--overlay-image);
+  opacity: var(--overlay-opacity);
 }
 
 ::-webkit-scrollbar {

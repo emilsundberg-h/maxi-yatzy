@@ -225,13 +225,13 @@ export default function DashboardPage() {
           <nav className="flex gap-2 text-xs font-semibold">
             <Link
               href="/ranking"
-              className="rounded-full border border-gold/20 bg-white/5 px-3 py-1.5 text-paper-dim hover:border-gold/40"
+              className="rounded-full border border-gold/20 bg-surface px-3 py-1.5 text-paper-dim hover:border-gold/40"
             >
               Ranking
             </Link>
             <Link
               href="/players"
-              className="rounded-full border border-gold/20 bg-white/5 px-3 py-1.5 text-paper-dim hover:border-gold/40"
+              className="rounded-full border border-gold/20 bg-surface px-3 py-1.5 text-paper-dim hover:border-gold/40"
             >
               Spelare
             </Link>
@@ -242,8 +242,8 @@ export default function DashboardPage() {
 
         <Link
           href="/match/new"
-          className="rounded-2xl px-6 py-3.5 text-center font-extrabold tracking-[.06em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
-          style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+          className="rounded-2xl px-6 py-3.5 text-center font-extrabold tracking-[.06em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
+          style={{ background: "var(--color-accent-grad)" }}
         >
           + NY MATCH
         </Link>

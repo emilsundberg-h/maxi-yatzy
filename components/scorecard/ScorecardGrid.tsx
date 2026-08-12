@@ -26,7 +26,7 @@ function initials(name: string): string {
   return name.trim().slice(0, 2).toUpperCase() || "?";
 }
 
-const LABEL_BG = "#0a1712";
+const LABEL_BG = "var(--color-panel)";
 // How long an armed (first-tapped) cell waits for the confirming second tap
 // before quietly disarming itself again — a stray arm from earlier in the
 // turn shouldn't stay primed to lock in a category on the next unrelated
@@ -118,7 +118,7 @@ export function ScorecardGrid({
         disabled={!clickable}
         onClick={handleClick}
         aria-label={armed ? `${CATEGORY_LABELS[categoryId]}: tryck igen för att låsa` : undefined}
-        className={`relative border-b border-white/5 px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
+        className={`relative border-b border-line px-1 py-1 text-center text-[13px] tabular-nums transition-colors ${
           // No background wash on the cell itself, clickable or not — the
           // design's cells are always plain (fully transparent, no matter
           // whose column or locked/unlocked) and let the pill or the plain
@@ -129,7 +129,7 @@ export function ScorecardGrid({
             ? "cursor-pointer"
             : filled !== undefined
               ? "font-bold text-paper"
-              : "cursor-default text-[#5d6b62]"
+              : "cursor-default text-muted-dim"
         }`}
       >
         {clickable ? (
@@ -141,7 +141,8 @@ export function ScorecardGrid({
               // obvious instead of implicit. pointer-events-none so it
               // never steals the confirming tap from the button beneath it.
               <span
-                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1a3428] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-[#e9dcb8] shadow-[0_4px_8px_rgba(0,0,0,.35)]"
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow-[0_4px_8px_rgba(0,0,0,.35)]"
+                style={{ background: "color-mix(in srgb, var(--color-gold) 35%, black)" }}
               >
                 TRYCK IGEN
               </span>
@@ -161,10 +162,10 @@ export function ScorecardGrid({
               className={`inline-flex min-w-[34px] items-center justify-center rounded-[10px] border-2 border-transparent px-2.5 py-1 text-[12px] leading-none font-bold shadow-[0_1px_2px_rgba(0,0,0,.35)] transition-all duration-150 ${
                 armed
                   ? positive
-                    ? "scale-[1.32] border-[#eecb7c] shadow-[0_0_0_5px_rgba(223,185,85,.6)] brightness-110"
+                    ? "scale-[1.32] border-gold-bright shadow-[0_0_0_5px_color-mix(in_srgb,var(--color-gold)_50%,transparent)] brightness-110"
                     : "scale-[1.32] border-[#8a4a4a] shadow-[0_0_0_5px_rgba(139,74,74,.6)] brightness-110"
                   : "scale-100"
-              } ${positive ? "bg-[#dfb955] text-[#2a2103]" : "bg-[#5b3838] text-[#d9b7b7]"}`}
+              } ${positive ? "bg-gold text-[var(--color-ink)]" : "bg-[#5b3838] text-[#d9b7b7]"}`}
             >
               {text}
             </span>
@@ -227,8 +228,8 @@ export function ScorecardGrid({
                   aria-label={`Visa ${players[id]?.name ?? "spelaren"}s bild`}
                   className={`flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[9px] font-extrabold ${
                     isActive
-                      ? "bg-gradient-to-br from-[#e9c877] to-[#b58a37] text-[#241a08]"
-                      : "border border-white/15 bg-white/10 text-paper-dim"
+                      ? "bg-gradient-to-br from-gold-bright to-gold-deep text-[var(--color-ink)]"
+                      : "border border-line bg-surface text-paper-dim"
                   }`}
                 >
                   {url ? (
@@ -329,7 +330,7 @@ export function ScorecardGrid({
           <div className="flex flex-col items-center gap-3">
             <div
               className="flex h-56 w-56 max-w-[70vw] items-center justify-center overflow-hidden rounded-full border-4 border-gold/40 text-6xl font-extrabold text-paper-dim shadow-[0_20px_50px_rgba(0,0,0,.5)]"
-              style={{ background: "#1a1410", aspectRatio: "1 / 1" }}
+              style={{ background: "var(--color-panel)", aspectRatio: "1 / 1" }}
             >
               {expandedAvatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -344,7 +345,7 @@ export function ScorecardGrid({
             <button
               type="button"
               onClick={() => setExpandedPlayerId(null)}
-              className="mt-1 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold text-paper-dim"
+              className="mt-1 rounded-full border border-line bg-surface px-4 py-1.5 text-xs font-semibold text-paper-dim"
             >
               Stäng
             </button>

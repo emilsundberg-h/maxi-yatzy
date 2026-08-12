@@ -15,7 +15,7 @@ export function ForfeitMatchModal({
 }: ForfeitMatchModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
-      <div className="w-full max-w-sm rounded-2xl border border-gold/25 bg-[#1a1410] p-6 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
+      <div className="w-full max-w-sm rounded-2xl border border-gold/25 bg-[var(--color-panel)] p-6 shadow-[0_20px_50px_rgba(0,0,0,.5)]">
         {isAdmin ? (
           <>
             <div className="mb-1 text-[10px] font-extrabold tracking-[.28em] text-gold">
@@ -39,15 +39,15 @@ export function ForfeitMatchModal({
               <button
                 type="button"
                 onClick={onCleanup}
-                className="rounded-xl px-4 py-2.5 font-extrabold text-[#241708]"
-                style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+                className="rounded-xl px-4 py-2.5 font-extrabold text-[var(--color-ink)]"
+                style={{ background: "var(--color-accent-grad)" }}
               >
                 Bara städning
               </button>
               <button
                 type="button"
                 onClick={onCancel}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-semibold text-paper-dim"
+                className="rounded-xl border border-line bg-surface px-4 py-2.5 font-semibold text-paper-dim"
               >
                 Avbryt
               </button>
@@ -68,7 +68,7 @@ export function ForfeitMatchModal({
               <button
                 type="button"
                 onClick={onCancel}
-                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-semibold text-paper-dim"
+                className="flex-1 rounded-xl border border-line bg-surface px-4 py-2.5 font-semibold text-paper-dim"
               >
                 Avbryt
               </button>

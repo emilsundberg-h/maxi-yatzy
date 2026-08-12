@@ -81,7 +81,7 @@ export function MatchCard({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[18px]">
+    <div className="relative overflow-hidden rounded-[var(--radius-2xl)]">
       {onSwipeDelete && (
         <button
           type="button"
@@ -103,34 +103,31 @@ export function MatchCard({
         }}
         onDragEnd={handleDragEnd}
         onClick={handleCardClick}
-        className="relative block cursor-pointer overflow-hidden rounded-[18px] border p-4 pl-5 transition-colors"
+        className="relative block cursor-pointer overflow-hidden rounded-[var(--radius-2xl)] border p-4 pl-5 transition-colors"
         style={{
           x,
           touchAction: "pan-y",
-          borderColor: isCompleted
-            ? "rgba(255,255,255,.07)"
-            : isYourTurn
-              ? "rgba(233,200,119,.28)"
-              : "rgba(255,255,255,.07)",
-          // The card's own tint is translucent by design (it's meant to
-          // blend with the page behind it), which let the "TA BORT" panel
-          // bleed straight through at rest once that panel sat right
-          // behind it. Painting an opaque backing (matching the page's
-          // own dark green) underneath the tint keeps the look identical
-          // against the page while actually blocking what's behind it —
-          // only the sliver the card has been dragged clear of shows red.
+          borderColor: isYourTurn
+            ? "color-mix(in srgb, var(--color-gold) 28%, transparent)"
+            : "var(--color-line)",
+          // The card's own tint is translucent-by-default (skog), which let
+          // the "TA BORT" panel bleed straight through at rest once that
+          // panel sat right behind it. Painting an opaque backing (the
+          // page's own base color) underneath the tint keeps the look
+          // identical against the page while actually blocking what's
+          // behind it — only the sliver the card has been dragged clear of
+          // shows red. Light themes' surface is already opaque, so the
+          // backing layer is a no-op there.
           background: `${
-            isCompleted
-              ? "linear-gradient(rgba(255,255,255,.02),rgba(255,255,255,.02))"
-              : isYourTurn
-                ? "linear-gradient(rgba(233,200,119,.07),rgba(233,200,119,.07))"
-                : "linear-gradient(rgba(255,255,255,.035),rgba(255,255,255,.035))"
-          }, #071f16`,
+            isYourTurn && !isCompleted
+              ? "color-mix(in srgb, var(--color-gold) 10%, var(--color-surface))"
+              : "var(--color-surface)"
+          }, var(--color-felt-deep)`,
         }}
       >
         <span
           className="absolute left-0 top-0 bottom-0 w-[4px]"
-          style={{ background: isYourTurn ? "#e9c877" : "#5aa88f" }}
+          style={{ background: isYourTurn ? "var(--color-gold-bright)" : "var(--color-sage)" }}
         />
         <div className="flex items-center justify-between gap-2">
           <span className="font-serif text-xl text-paper">
@@ -139,8 +136,11 @@ export function MatchCard({
           <span
             className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-extrabold tracking-[.14em]"
             style={{
-              borderColor: match.mode === "shared-device" ? "rgba(90,168,143,.4)" : "rgba(233,200,119,.4)",
-              color: match.mode === "shared-device" ? "#8bbfae" : "#cbb984",
+              borderColor:
+                match.mode === "shared-device"
+                  ? "rgba(90,168,143,.4)"
+                  : "color-mix(in srgb, var(--color-gold) 40%, transparent)",
+              color: match.mode === "shared-device" ? "#8bbfae" : "var(--color-gold)",
             }}
           >
             {match.mode === "shared-device" ? "SAMMA ENHET" : "EGNA ENHETER"}
@@ -157,8 +157,8 @@ export function MatchCard({
             return (
               <div
                 key={id}
-                className="flex h-[26px] w-[26px] items-center justify-center overflow-hidden rounded-full border-2 text-[10px] font-bold text-paper-dim"
-                style={{ background: "#3a3a40", borderColor: "#17171b" }}
+                className="flex h-[26px] w-[26px] items-center justify-center overflow-hidden rounded-full border-2 bg-surface text-[10px] font-bold text-paper-dim"
+                style={{ borderColor: "var(--color-line)" }}
               >
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -171,8 +171,8 @@ export function MatchCard({
           })}
           {match.playerIds.length > 5 && (
             <div
-              className="flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 text-[9px] font-bold text-muted"
-              style={{ background: "#2a2a2f", borderColor: "#17171b" }}
+              className="flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 bg-surface text-[9px] font-bold text-muted"
+              style={{ borderColor: "var(--color-line)" }}
             >
               +{match.playerIds.length - 5}
             </div>
@@ -195,13 +195,13 @@ export function MatchCard({
           ) : (
             <span
               className="flex items-center gap-1.5 font-semibold"
-              style={{ color: isYourTurn ? "#e9c877" : "#a49d8e" }}
+              style={{ color: isYourTurn ? "var(--color-gold-bright)" : "var(--color-muted)" }}
             >
               <span
                 className="h-[7px] w-[7px] rounded-full"
                 style={{
-                  background: isYourTurn ? "#e9c877" : "#6f6a5e",
-                  boxShadow: isYourTurn ? "0 0 8px #e9c877" : "none",
+                  background: isYourTurn ? "var(--color-gold-bright)" : "var(--color-muted-dim)",
+                  boxShadow: isYourTurn ? "0 0 8px var(--color-gold-bright)" : "none",
                 }}
               />
               {isYourTurn ? "Din tur" : `${players[activePlayerId]?.name ?? "?"} slår nu`}
@@ -212,14 +212,12 @@ export function MatchCard({
           </span>
         </div>
         {!isCompleted && (
-          <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface">
             <div
               className="h-full"
               style={{
                 width: `${progress * 100}%`,
-                background: isYourTurn
-                  ? "linear-gradient(90deg,#e9c877,#b58a37)"
-                  : "#5aa88f",
+                background: isYourTurn ? "var(--color-accent-grad)" : "var(--color-sage)",
               }}
             />
           </div>

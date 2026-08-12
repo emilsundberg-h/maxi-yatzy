@@ -208,8 +208,8 @@ export default function MatchPage() {
         </div>
         <Link
           href="/"
-          className="rounded-2xl px-6 py-3 font-extrabold tracking-[.08em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
-          style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+          className="rounded-2xl px-6 py-3 font-extrabold tracking-[.08em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
+          style={{ background: "var(--color-accent-grad)" }}
         >
           TILL MATCHER
         </Link>
@@ -230,8 +230,8 @@ export default function MatchPage() {
         <button
           type="button"
           onClick={() => setHandoffAcknowledged(true)}
-          className="mt-2 rounded-2xl px-8 py-4 text-[15px] font-extrabold tracking-[.08em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4),inset_0_2px_0_rgba(255,255,255,.45)]"
-          style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+          className="mt-2 rounded-2xl px-8 py-4 text-[15px] font-extrabold tracking-[.08em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4),inset_0_2px_0_rgba(255,255,255,.45)]"
+          style={{ background: "var(--color-accent-grad)" }}
         >
           JAG ÄR REDO
         </button>
@@ -263,10 +263,10 @@ export default function MatchPage() {
         )}
       </div>
 
-      <div className="sticky top-2 flex w-[112px] flex-none flex-col items-center gap-3 rounded-2xl border border-gold/15 bg-black/25 px-2 pt-2 pb-3 sm:w-[140px] sm:px-3">
+      <div className="sticky top-2 flex w-[112px] flex-none flex-col items-center gap-3 rounded-2xl border border-gold/15 bg-surface px-2 pt-2 pb-3 sm:w-[140px] sm:px-3">
         <Link
           href="/"
-          className="flex h-7 w-7 shrink-0 items-center justify-center self-start rounded-full border border-gold/25 bg-white/5 text-sm text-gold-bright"
+          className="flex h-7 w-7 shrink-0 items-center justify-center self-start rounded-full border border-gold/25 bg-surface text-sm text-gold-bright"
         >
           ‹
         </Link>

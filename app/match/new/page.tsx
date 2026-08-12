@@ -13,8 +13,8 @@ import { getProfiles, listProfiles, type Profile } from "@/lib/supabase/profiles
 function pillClass(active: boolean) {
   return `flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
     active
-      ? "text-[#241a08]"
-      : "border border-white/10 bg-white/5 text-paper-dim"
+      ? "text-[var(--color-ink)]"
+      : "border border-line bg-surface text-paper-dim"
   }`;
 }
 
@@ -98,7 +98,7 @@ function InvitePicker({
           value={email}
           onChange={(e) => handleEmailChange(e.target.value)}
           placeholder={`${playerName}s e-post`}
-          className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-sm text-paper placeholder:text-muted-dim"
+          className="w-full rounded-lg border border-line bg-surface px-2.5 py-2 text-sm text-paper placeholder:text-muted-dim"
         />
         <button
           type="button"
@@ -118,7 +118,7 @@ function InvitePicker({
     <div className="mt-2">
       {selectedProfile ? (
         <div className="flex items-center gap-2 rounded-lg border border-gold/25 bg-gold/10 px-2.5 py-2 text-sm">
-          <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[10px] font-bold text-paper-dim">
+          <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-surface text-[10px] font-bold text-paper-dim">
             {selectedProfile.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={selectedProfile.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -141,7 +141,7 @@ function InvitePicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Sök eller välj konto för ${playerName}`}
-            className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-sm text-paper placeholder:text-muted-dim"
+            className="w-full rounded-lg border border-line bg-surface px-2.5 py-2 text-sm text-paper placeholder:text-muted-dim"
           />
           {!loaded && <p className="mt-1 text-xs text-muted-dim">Laddar konton...</p>}
           {loaded && visibleResults.length === 0 && (
@@ -150,15 +150,15 @@ function InvitePicker({
             </p>
           )}
           {visibleResults.length > 0 && (
-            <div className="mt-1 flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-white/10 bg-black/40 p-1">
+            <div className="mt-1 flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-surface p-1">
               {visibleResults.map((p) => (
                 <button
                   key={p.userId}
                   type="button"
                   onClick={() => selectProfile(p)}
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-paper hover:bg-white/10"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-paper hover:bg-gold/10"
                 >
-                  <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[10px] font-bold text-paper-dim">
+                  <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-surface text-[10px] font-bold text-paper-dim">
                     {p.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -432,14 +432,14 @@ export default function NewMatchPage() {
 
       <div>
         <p className="mb-2 text-[10px] font-extrabold tracking-[.2em] text-sage">LÄGE</p>
-        <div className="flex gap-2 rounded-2xl bg-white/5 p-1">
+        <div className="flex gap-2 rounded-2xl bg-surface p-1">
           <button
             type="button"
             onClick={() => setMode("separate-devices")}
             className={pillClass(mode === "separate-devices")}
             style={
               mode === "separate-devices"
-                ? { background: "linear-gradient(150deg,#e6d0a0,#c7a862)" }
+                ? { background: "var(--color-accent-grad-muted)" }
                 : undefined
             }
           >
@@ -451,7 +451,7 @@ export default function NewMatchPage() {
             className={pillClass(mode === "shared-device")}
             style={
               mode === "shared-device"
-                ? { background: "linear-gradient(150deg,#e6d0a0,#c7a862)" }
+                ? { background: "var(--color-accent-grad-muted)" }
                 : undefined
             }
           >
@@ -465,7 +465,7 @@ export default function NewMatchPage() {
         <button
           type="button"
           onClick={() => setPickerOpen((o) => !o)}
-          className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper"
+          className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-left text-paper"
         >
           <span className="flex-1">
             {selectedNames.length > 0 ? selectedNames.join(", ") : "Spelare"}
@@ -474,7 +474,7 @@ export default function NewMatchPage() {
         </button>
 
         {pickerOpen && (
-          <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">
+          <div className="mt-2 rounded-xl border border-line bg-surface p-2">
             <div className="flex flex-col gap-1.5">
               {players.map((p) => {
                 const isSelf = p.id === localPlayerId;
@@ -488,16 +488,16 @@ export default function NewMatchPage() {
                 return (
                   <div
                     key={p.id}
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5"
+                    className="rounded-xl border border-line bg-surface px-3 py-2.5"
                   >
                     <label className="flex items-center gap-2.5 text-paper">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(p.id)}
-                        className="accent-[#c9a959]"
+                        className="accent-[var(--color-gold)]"
                       />
-                      <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
+                      <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-line bg-surface text-[10px] font-bold text-paper-dim">
                         {avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -539,7 +539,7 @@ export default function NewMatchPage() {
             </div>
 
             {invitableProfiles.length > 0 && (
-              <div className="mt-3 border-t border-white/10 pt-3">
+              <div className="mt-3 border-t border-line pt-3">
                 <button
                   type="button"
                   onClick={() => setAccountsOpen((o) => !o)}
@@ -558,9 +558,9 @@ export default function NewMatchPage() {
                         type="button"
                         disabled={addingAccountId === p.userId}
                         onClick={() => handleSelectAccount(p)}
-                        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-paper disabled:opacity-60"
+                        className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-left text-paper disabled:opacity-60"
                       >
-                        <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[10px] font-bold text-paper-dim">
+                        <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-line bg-surface text-[10px] font-bold text-paper-dim">
                           {p.avatarUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={p.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -580,12 +580,12 @@ export default function NewMatchPage() {
               </div>
             )}
 
-            <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+            <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
               <button
                 type="button"
                 onClick={() => newAvatarInputRef.current?.click()}
                 disabled={addingPlayer}
-                className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-gold/30 bg-white/5 text-[10px] text-paper-dim disabled:opacity-60"
+                className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-gold/30 bg-surface text-[10px] text-paper-dim disabled:opacity-60"
               >
                 {newAvatarPreview ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -606,14 +606,14 @@ export default function NewMatchPage() {
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Ny spelare"
                 disabled={addingPlayer}
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-paper placeholder:text-muted-dim disabled:opacity-60"
+                className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2.5 text-paper placeholder:text-muted-dim disabled:opacity-60"
                 onKeyDown={(e) => e.key === "Enter" && handleAddPlayer()}
               />
               <button
                 type="button"
                 onClick={handleAddPlayer}
                 disabled={addingPlayer}
-                className="shrink-0 rounded-xl border border-gold/25 bg-white/5 px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
+                className="shrink-0 rounded-xl border border-gold/25 bg-surface px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
               >
                 Lägg till
               </button>
@@ -623,7 +623,7 @@ export default function NewMatchPage() {
             <button
               type="button"
               onClick={() => setPickerOpen(false)}
-              className="mt-3 w-full rounded-xl bg-white/5 py-2 text-sm font-semibold text-paper-dim"
+              className="mt-3 w-full rounded-xl bg-surface py-2 text-sm font-semibold text-paper-dim"
             >
               Klar
             </button>
@@ -641,8 +641,8 @@ export default function NewMatchPage() {
         type="button"
         disabled={selectedIds.length === 0 || creating}
         onClick={handleStart}
-        className="rounded-2xl px-6 py-3.5 font-extrabold tracking-[.06em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4)] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-        style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+        className="rounded-2xl px-6 py-3.5 font-extrabold tracking-[.06em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4)] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+        style={{ background: "var(--color-accent-grad)" }}
       >
         STARTA MATCH
       </button>
