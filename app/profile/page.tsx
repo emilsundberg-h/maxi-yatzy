@@ -139,23 +139,20 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 p-6 pt-8">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gold/25 bg-surface text-sm text-gold-bright"
-          >
-            ‹
-          </Link>
-          <div>
-            <div className="text-[10px] font-extrabold tracking-[.28em] text-gold">
-              MAXI YATZY
-            </div>
-            <h1 className="font-serif text-3xl font-semibold text-paper">Min profil</h1>
+        <div>
+          <div className="text-[10px] font-extrabold tracking-[.28em] text-gold">
+            MAXI YATZY
           </div>
+          <h1 className="font-serif text-3xl font-semibold text-paper">Min profil</h1>
         </div>
-        <Link href="/players" className="text-sm text-paper-dim hover:text-gold-bright">
-          Till spelare
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/players" className="text-sm text-paper-dim hover:text-gold-bright">
+            Spelare
+          </Link>
+          <Link href="/" className="text-sm text-paper-dim hover:text-gold-bright">
+            Matcher
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col items-center gap-3">
