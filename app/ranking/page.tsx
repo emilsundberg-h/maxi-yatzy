@@ -124,18 +124,18 @@ export default function RankingPage() {
       </div>
 
       <div
-        className="relative overflow-hidden rounded-[20px] border p-5"
+        className="relative overflow-hidden rounded-[var(--radius-2xl)] border p-5"
         style={{
-          borderColor: "rgba(233,200,119,.3)",
+          borderColor: "color-mix(in srgb, var(--color-gold) 30%, transparent)",
           background:
-            "linear-gradient(150deg,rgba(233,200,119,.16),rgba(233,200,119,.03))",
+            "linear-gradient(150deg,color-mix(in srgb, var(--color-gold) 16%, transparent),color-mix(in srgb, var(--color-gold) 3%, transparent))",
         }}
       >
         <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[.2em] text-gold-bright">
           <span className="text-sm">♛</span>TOTALT HÖGSTA POÄNG
         </div>
         <div className="mt-1.5 flex items-end gap-3">
-          <div className="font-serif text-5xl font-bold leading-none text-[#f6e6b8] tabular-nums">
+          <div className="font-serif text-5xl font-bold leading-none text-gold-bright tabular-nums">
             {globalHigh?.score ?? "–"}
           </div>
           {globalHigh && (
@@ -147,7 +147,7 @@ export default function RankingPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5 text-center">
+        <div className="rounded-2xl border border-line bg-surface p-3.5 text-center">
           <div className="font-serif text-2xl font-semibold text-paper tabular-nums">
             {personalHigh ?? "–"}
           </div>
@@ -155,7 +155,7 @@ export default function RankingPage() {
             DIN BÄSTA
           </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5 text-center">
+        <div className="rounded-2xl border border-line bg-surface p-3.5 text-center">
           <div className="font-serif text-2xl font-semibold text-paper tabular-nums">
             {personalWins}
           </div>
@@ -173,7 +173,7 @@ export default function RankingPage() {
           {rows.map((row, i) => (
             <div
               key={row.id}
-              className="flex items-center gap-3 border-b border-white/5 py-2.5"
+              className="flex items-center gap-3 border-b border-line py-2.5"
             >
               <span
                 className={`w-6 text-center font-serif text-xl ${

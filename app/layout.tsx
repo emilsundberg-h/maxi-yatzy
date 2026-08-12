@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import {
+  Archivo,
+  Archivo_Black,
+  Caveat,
+  Cormorant_Garamond,
+  Jost,
+  Manrope,
+  Quicksand,
+} from "next/font/google";
+import Script from "next/script";
 import { AuthInit } from "@/components/auth/AuthInit";
 import { PendingInviteModal } from "@/components/invites/PendingInviteModal";
 import "./globals.css";
@@ -14,6 +23,38 @@ const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
+});
+
+// Loaded for the non-forest Färgteman (color themes) — see app/globals.css'
+// per-theme `--font-serif`/`--font-sans` overrides and lib/theme/themes.ts.
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const archivoBlack = Archivo_Black({
+  variable: "--font-archivo-black",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["500", "700"],
+});
+
+const quicksand = Quicksand({
+  variable: "--font-quicksand",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const jost = Jost({
+  variable: "--font-jost",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -56,9 +97,28 @@ export default function RootLayout({
   return (
     <html
       lang="sv"
-      className={`${cormorant.variable} ${manrope.variable} h-full antialiased`}
+      className={`${cormorant.variable} ${manrope.variable} ${archivo.variable} ${archivoBlack.variable} ${caveat.variable} ${quicksand.variable} ${jost.variable} h-full antialiased`}
+      // The no-flash theme-init Script below sets data-theme on this element
+      // *before* hydration runs, straight from localStorage — the server
+      // markup never has it (it doesn't know the visitor's saved theme), so
+      // React would otherwise flag a hydration mismatch on exactly this
+      // attribute every load. This is the standard fix for that class of
+      // "apply a client-only preference before paint" script.
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col font-sans text-paper [padding:env(safe-area-inset-top)_env(safe-area-inset-right)_env(safe-area-inset-bottom)_env(safe-area-inset-left)]">
+        {/* Applies a locally-saved theme choice before first paint — without
+            this, the page would flash the default "skog" look and then snap
+            to the saved theme once lib/store/useThemeStore.ts hydrates on
+            the client. Kept in sync with that store's storage key/theme ids. */}
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`try {
+            var t = localStorage.getItem("mx-theme");
+            if (t && t !== "skog" && ["bauhaus","kollegie","pastell","greige"].indexOf(t) !== -1) {
+              document.documentElement.dataset.theme = t;
+            }
+          } catch (e) {}`}
+        </Script>
         <AuthInit />
         <PendingInviteModal />
         {children}

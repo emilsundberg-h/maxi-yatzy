@@ -105,9 +105,9 @@ export default function PlayersPage() {
           return (
             <div
               key={p.id}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5"
+              className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[11px] font-extrabold text-paper-dim">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface text-[11px] font-extrabold text-paper-dim">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -161,20 +161,20 @@ export default function PlayersPage() {
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Nytt spelarnamn"
           disabled={adding}
-          className="flex-1 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-paper placeholder:text-muted-dim disabled:opacity-60"
+          className="flex-1 rounded-xl border border-line bg-surface px-3 py-2.5 text-paper placeholder:text-muted-dim disabled:opacity-60"
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
         />
         <button
           type="button"
           onClick={handleAdd}
           disabled={adding}
-          className="rounded-xl border border-gold/25 bg-white/5 px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
+          className="rounded-xl border border-gold/25 bg-surface px-4 py-2 font-semibold text-gold-bright disabled:opacity-60"
         >
           Lägg till
         </button>
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
+      <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
         <span className="text-xs text-muted">{user?.email}</span>
         <button
           type="button"

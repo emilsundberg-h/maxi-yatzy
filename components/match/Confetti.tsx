@@ -3,7 +3,23 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
-const COLORS = ["#c9a959", "#e9c877", "#f4efe3", "#7e9082", "#1c5d45", "#b58a37"];
+const COLOR_VARS = [
+  "--color-gold",
+  "--color-gold-bright",
+  "--color-paper",
+  "--color-sage",
+  "--color-felt-bright",
+  "--color-gold-deep",
+];
+
+// Reads the *current* theme's palette straight off the root element rather
+// than hard-coding hex values, so confetti automatically matches whichever
+// Färgtema (color theme) is active without a per-theme color table here.
+function themeColors(): string[] {
+  if (typeof window === "undefined") return ["#c9a959"];
+  const style = getComputedStyle(document.documentElement);
+  return COLOR_VARS.map((v) => style.getPropertyValue(v).trim() || "#c9a959");
+}
 
 interface Piece {
   id: number;
@@ -18,13 +34,13 @@ interface Piece {
   duration: number;
 }
 
-function makePieces(count: number): Piece[] {
+function makePieces(count: number, colors: string[]): Piece[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     leftPct: Math.random() * 100,
     driftVw: (Math.random() - 0.5) * 30,
     peakVh: 10 + Math.random() * 55,
-    color: COLORS[i % COLORS.length],
+    color: colors[i % colors.length],
     width: 6 + Math.random() * 6,
     height: 10 + Math.random() * 8,
     spin: (Math.random() - 0.5) * 720,
@@ -36,7 +52,7 @@ function makePieces(count: number): Piece[] {
 // Fired once when the match ends — bursts a couple hundred pieces up from
 // the bottom edge and lets them tumble back down, covering the screen.
 export function Confetti({ count = 160 }: { count?: number }) {
-  const pieces = useMemo(() => makePieces(count), [count]);
+  const pieces = useMemo(() => makePieces(count, themeColors()), [count]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[75] overflow-hidden">

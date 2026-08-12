@@ -60,7 +60,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="E-post"
-          className="w-full rounded-xl border border-gold/20 bg-black/25 px-3 py-2.5 text-paper placeholder:text-muted-dim focus:border-gold/50 focus:outline-none"
+          className="w-full rounded-xl border border-gold/20 bg-surface px-3 py-2.5 text-paper placeholder:text-muted-dim focus:border-gold/50 focus:outline-none"
         />
         <input
           type="password"
@@ -70,7 +70,7 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Lösenord"
-          className="w-full rounded-xl border border-gold/20 bg-black/25 px-3 py-2.5 text-paper placeholder:text-muted-dim focus:border-gold/50 focus:outline-none"
+          className="w-full rounded-xl border border-gold/20 bg-surface px-3 py-2.5 text-paper placeholder:text-muted-dim focus:border-gold/50 focus:outline-none"
         />
 
         {error && <p className="text-sm text-red-400">{error}</p>}
@@ -79,8 +79,8 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-1 w-full rounded-2xl px-6 py-3 font-extrabold tracking-[.08em] text-[#241708] shadow-[0_12px_26px_rgba(0,0,0,.4)] disabled:opacity-50"
-          style={{ background: "linear-gradient(150deg,#eecb7c,#b98d38)" }}
+          className="mt-1 w-full rounded-2xl px-6 py-3 font-extrabold tracking-[.08em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4)] disabled:opacity-50"
+          style={{ background: "var(--color-accent-grad)" }}
         >
           {submitting ? "..." : mode === "signin" ? "LOGGA IN" : "SKAPA KONTO"}
         </button>
