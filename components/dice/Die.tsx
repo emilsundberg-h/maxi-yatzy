@@ -13,9 +13,10 @@ const PIP_MAPS: Record<DieValue, number[]> = {
   6: [0, 2, 3, 5, 6, 8],
 };
 
-// Ties the lock-ring glow to the current theme's accent color. The die's
-// face/pip colors stay a constant cream/black in every theme — dice keep
-// looking like physical ivory dice regardless of the felt color around them.
+// Ties the lock-ring glow to the current theme's accent color. Unlocked
+// dice stay a constant ivory/black in every theme (dice keep looking like
+// physical dice regardless of the felt color around them); only a *locked*
+// die's face/pips switch to the theme's own "held" marking, below.
 const GOLD = "var(--color-gold-bright)";
 
 // Each face keeps a fixed value/pip pattern (opposite faces sum to 7, like a
@@ -179,9 +180,17 @@ export function Die({
           // hug it: too tight and the face paints over it, too loose and a
           // gap opens at the rounded corners. Attached to the face, the ring
           // is magnified right along with it and always lines up exactly.
+          // GOLD is a var(--color-gold-bright) reference, not a literal hex
+          // string — appending "cc" after it (the old trick for adding
+          // alpha to a hex color) produces the malformed token
+          // "var(--color-gold-bright)cc", which invalidates this entire
+          // comma-separated box-shadow list (not just this one layer),
+          // silently dropping the lock ring *and* the face's own glossy
+          // inset shadows below in every theme. color-mix() adds the alpha
+          // instead, staying valid regardless of what the var resolves to.
           const lockRing =
             locked && face.value === value
-              ? `, 0 0 0 ${size * 0.03}px rgba(20,15,5,.6), 0 0 0 ${size * 0.08}px ${GOLD}, 0 0 ${size * 0.3}px ${GOLD}cc`
+              ? `, 0 0 0 ${size * 0.03}px rgba(20,15,5,.6), 0 0 0 ${size * 0.08}px ${GOLD}, 0 0 ${size * 0.3}px color-mix(in srgb, ${GOLD} 80%, transparent)`
               : "";
           return (
             <div
@@ -192,7 +201,14 @@ export function Die({
                 transform: face.transform(half),
                 backfaceVisibility: "hidden",
                 borderRadius: radius,
-                background: `linear-gradient(150deg, rgba(250,245,234,${face.shade}) 0%, rgba(236,226,205,${face.shade}) 60%, rgba(221,208,180,${face.shade}) 100%)`,
+                // A locked die's face and pips switch to the theme's own
+                // "held" marking (see --die-held-bg/--die-pip-held in
+                // app/globals.css) instead of the usual shade-lit ivory —
+                // every theme's design has its own version of this, it
+                // isn't just the lock ring.
+                background: locked
+                  ? "var(--die-held-bg)"
+                  : `linear-gradient(150deg, rgba(250,245,234,${face.shade}) 0%, rgba(236,226,205,${face.shade}) 60%, rgba(221,208,180,${face.shade}) 100%)`,
                 boxShadow: `inset 0 1.5px 0 rgba(255,255,255,.7), inset 0 -2px 3px rgba(120,100,60,.2)${lockRing}`,
                 display: "grid",
                 gridTemplateColumns: "repeat(3,1fr)",
@@ -210,7 +226,7 @@ export function Die({
                         width: size * 0.19,
                         height: size * 0.19,
                         borderRadius: "50%",
-                        background: "#241f16",
+                        background: locked ? "var(--die-pip-held)" : "#241f16",
                         boxShadow: "inset 0 -1px 1px rgba(0,0,0,.35)",
                       }}
                     />

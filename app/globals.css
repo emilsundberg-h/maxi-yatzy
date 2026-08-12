@@ -67,6 +67,12 @@
   /* Kollegieblock's graph-paper backdrop; every other theme leaves this off. */
   --overlay-image: none;
   --overlay-opacity: 0;
+  /* A locked/held die's face background and pip color — every theme's own
+     "marking" for which dice are locked in, straight from the design doc.
+     The lock-ring glow around it (drawn in Die.tsx) already follows
+     --color-gold-bright per theme; these two are the die's own face. */
+  --die-held-bg: linear-gradient(160deg, #f6e3ae, #d9b96a);
+  --die-pip-held: #2b2416;
   /* Scorecard row/category labels ("Ettor", "Summa övre", ...) — plain body
      font by default. Kollegieblock overrides this to its handwritten
      Caveat font (with a larger size — Caveat is illegible this small) to
@@ -99,6 +105,8 @@ html[data-theme="bauhaus"] {
   --radius-2xl: 0px;
   --font-serif: var(--font-archivo-black), "Archivo Black", sans-serif;
   --font-sans: var(--font-archivo), "Archivo", sans-serif;
+  --die-held-bg: #f2b705;
+  --die-pip-held: #141414;
 }
 
 /* ---- Kollegieblock ---- */
@@ -130,6 +138,8 @@ html[data-theme="kollegie"] {
   --overlay-opacity: 1;
   --font-label: var(--font-caveat), "Caveat", cursive;
   --label-font-size: 16px;
+  --die-held-bg: #fdeceb;
+  --die-pip-held: #d94436;
 }
 
 /* ---- Pastell ---- */
@@ -155,6 +165,8 @@ html[data-theme="pastell"] {
   --radius-2xl: 22px;
   --font-serif: var(--font-quicksand), "Quicksand", sans-serif;
   --font-sans: var(--font-quicksand), "Quicksand", sans-serif;
+  --die-held-bg: linear-gradient(160deg, #ffe3ec, #e3d9fa);
+  --die-pip-held: #6f6390;
 }
 
 /* ---- Greige ---- */
@@ -180,6 +192,8 @@ html[data-theme="greige"] {
   --radius-2xl: 10px;
   --font-serif: var(--font-cormorant), "Cormorant Garamond", serif;
   --font-sans: var(--font-jost), "Jost", sans-serif;
+  --die-held-bg: linear-gradient(160deg, #3a352e, #2b2823);
+  --die-pip-held: #f4f1ec;
 }
 
 html,
