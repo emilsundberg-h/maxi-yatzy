@@ -5,6 +5,28 @@ import { boardFromMoves, cellKey, computeBounds, type PlacedMark } from "@/lib/d
 
 const CELL_SIZE = 36;
 
+// Rendered as SVG strokes rather than the "✕"/"○" text glyphs — a text
+// circle reads noticeably smaller/thinner than a text cross at the same
+// font size (it's mostly whitespace inside thin curves), so matching them
+// by eye needs the ring drawn deliberately bigger and thicker, not just the
+// same font-size bump applied to both.
+function Kryss({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 36 36" width="76%" height="76%">
+      <line x1="7" y1="7" x2="29" y2="29" stroke={color} strokeWidth="5" strokeLinecap="round" />
+      <line x1="29" y1="7" x2="7" y2="29" stroke={color} strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function Ring({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 36 36" width="84%" height="84%">
+      <circle cx="18" cy="18" r="12" fill="none" stroke={color} strokeWidth="6" />
+    </svg>
+  );
+}
+
 interface BoardProps {
   moves: PlacedMark[];
   winningCells?: PlacedMark[];
@@ -67,13 +89,14 @@ export function Board({ moves, winningCells, interactive, onPlaceMark }: BoardPr
       const placed = board.get(cellKey(x, y));
       const isWinning = winningKeys.has(cellKey(x, y));
       const clickable = interactive && !placed;
+      const markColor = placed?.mark === "kryss" ? "var(--color-gold-bright)" : "var(--color-paper)";
       cells.push(
         <button
           key={cellKey(x, y)}
           type="button"
           disabled={!clickable}
           onClick={() => onPlaceMark?.(x, y)}
-          className="flex items-center justify-center border text-lg font-bold leading-none"
+          className="flex items-center justify-center border"
           style={{
             width: CELL_SIZE,
             height: CELL_SIZE,
@@ -82,11 +105,11 @@ export function Board({ moves, winningCells, interactive, onPlaceMark }: BoardPr
               ? "color-mix(in srgb, var(--color-gold-bright) 22%, var(--color-surface))"
               : "var(--color-surface)",
             boxShadow: isWinning ? "0 0 10px var(--color-gold-bright)" : undefined,
-            color: placed?.mark === "kryss" ? "var(--color-gold-bright)" : "var(--color-paper)",
             cursor: clickable ? "pointer" : "default",
           }}
         >
-          {placed?.mark === "kryss" ? "✕" : placed?.mark === "ring" ? "○" : ""}
+          {placed?.mark === "kryss" && <Kryss color={markColor} />}
+          {placed?.mark === "ring" && <Ring color={markColor} />}
         </button>,
       );
     }

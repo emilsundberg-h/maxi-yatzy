@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PullToRefreshIndicator } from "@/components/dashboard/PullToRefreshIndicator";
 import { ActivityFeed } from "@/components/match/ActivityFeed";
-import { HandoffScreen } from "@/components/match/HandoffScreen";
 import { WinnerModal } from "@/components/match/WinnerModal";
 import { checkWinner, movesFromEvents, symbolForPlayer } from "@/lib/domain/luffarschack";
 import { playerBelongsToUser } from "@/lib/domain/players";
@@ -25,16 +24,8 @@ export function LuffarschackMatchView({ matchId }: { matchId: string }) {
     refreshing: pullRefreshing,
     threshold: pullThreshold,
   } = usePullToRefresh(() => refreshMatch(matchId));
-  const [handoffAcknowledged, setHandoffAcknowledged] = useState(false);
   const [trackedStatus, setTrackedStatus] = useState(match?.status);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
-
-  const turnKey = match ? `${match.currentPlayerIndex}:${match.currentTurnNumber}` : undefined;
-  const [trackedTurnKey, setTrackedTurnKey] = useState(turnKey);
-  if (turnKey !== trackedTurnKey) {
-    setTrackedTurnKey(turnKey);
-    setHandoffAcknowledged(false);
-  }
 
   // Fires once, right when the match is decided — trackedStatus !==
   // undefined skips the initial load of an already-finished match, which
@@ -128,16 +119,10 @@ export function LuffarschackMatchView({ matchId }: { matchId: string }) {
     );
   }
 
-  if (match.mode === "shared-device" && !handoffAcknowledged) {
-    return withPullToRefresh(
-      <HandoffScreen
-        activePlayerName={activePlayerName}
-        subtitle={`Drag ${moves.length + 1} · du är ${symbolLabel(activePlayerId)}`}
-        onReady={() => setHandoffAcknowledged(true)}
-      />,
-    );
-  }
-
+  // Unlike Yatzy's pass-and-play handoff (which gates a private dice
+  // roll/scoring choice behind "hand the phone over" first), Luffarschack
+  // has nothing to hide between turns — the board itself stays visible and
+  // interactive the whole time; only who's allowed to tap next changes.
   return withPullToRefresh(
     <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-4 p-2 sm:p-4">
       <div className="flex w-full items-center justify-between">
@@ -174,7 +159,7 @@ export function LuffarschackMatchView({ matchId }: { matchId: string }) {
       </div>
 
       <div className="text-center text-[11px] font-bold tracking-[.15em] text-gold-bright">
-        {isLocalPlayersTurn ? "DIN TUR" : `${activePlayerName}S TUR`}
+        {isLocalPlayersTurn ? "DIN TUR" : `${activePlayerName}S TUR`} · {symbolLabel(activePlayerId)}
       </div>
 
       <Board
