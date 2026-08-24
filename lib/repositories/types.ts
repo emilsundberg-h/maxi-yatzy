@@ -1,5 +1,6 @@
 import type {
   ActivityEvent,
+  GameType,
   Match,
   MatchMode,
   MatchPlayer,
@@ -31,7 +32,7 @@ export interface PlayerRepository {
 }
 
 export interface MatchRepository {
-  createMatch(mode: MatchMode, playerIds: string[]): Promise<Match>;
+  createMatch(mode: MatchMode, playerIds: string[], game: GameType): Promise<Match>;
   getMatch(id: string): Promise<Match | undefined>;
   listMatches(filter?: { status?: MatchStatus }): Promise<Match[]>;
   updateMatch(match: Match): Promise<void>;

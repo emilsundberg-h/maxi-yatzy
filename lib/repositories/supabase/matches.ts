@@ -1,22 +1,26 @@
-import type { Match, MatchMode, MatchPlayer, MatchStatus } from "@/lib/domain/types";
+import type { GameType, Match, MatchMode, MatchPlayer, MatchStatus } from "@/lib/domain/types";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { MatchRepository } from "@/lib/repositories/types";
 import { requireUserId } from "./auth-helpers";
 import { toMatch, toMatchPlayer, type MatchPlayerRow, type MatchRow } from "./mappers";
 
 export class SupabaseMatchRepository implements MatchRepository {
-  async createMatch(mode: MatchMode, playerIds: string[]): Promise<Match> {
+  async createMatch(mode: MatchMode, playerIds: string[], game: GameType): Promise<Match> {
     const supabase = getSupabaseClient();
     const ownerUserId = await requireUserId();
 
     const { data, error } = await supabase
       .from("matches")
       .insert({
+        game,
         mode,
         player_ids: playerIds,
-        // Random starting player; every turn after that rotates in playerIds
-        // order (see useMatchStore's score() action).
-        current_player_index: Math.floor(Math.random() * playerIds.length),
+        // Luffarschack: kryss (playerIds[0]) always opens, no randomness —
+        // see symbolForPlayer() in lib/domain/luffarschack.ts. Every other
+        // game keeps a random starting player; every turn after that
+        // rotates in playerIds order (see useMatchStore's score() action).
+        current_player_index:
+          game === "luffarschack" ? 0 : Math.floor(Math.random() * playerIds.length),
         owner_user_id: ownerUserId,
       })
       .select()
@@ -57,6 +61,7 @@ export class SupabaseMatchRepository implements MatchRepository {
     const { error } = await supabase
       .from("matches")
       .update({
+        game: match.game,
         mode: match.mode,
         status: match.status,
         player_ids: match.playerIds,
@@ -66,6 +71,7 @@ export class SupabaseMatchRepository implements MatchRepository {
         completed_at: match.completedAt ?? null,
         last_dice: match.lastDice ?? null,
         forfeited_by_player_id: match.forfeitedByPlayerId ?? null,
+        winner_player_id: match.winnerPlayerId ?? null,
       })
       .eq("id", match.id);
     if (error) throw error;

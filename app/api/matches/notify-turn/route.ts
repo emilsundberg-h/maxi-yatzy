@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   // exactly the authorization check we want here.
   const { data: match } = await supabase
     .from("matches")
-    .select("id, mode")
+    .select("id, mode, game")
     .eq("id", matchId)
     .maybeSingle();
   if (!match) return NextResponse.json({ error: "Match not found" }, { status: 404 });
@@ -38,10 +38,15 @@ export async function POST(req: Request) {
   const targetUserId = player?.linked_user_id;
   if (!targetUserId || targetUserId === user.id) return NextResponse.json({ ok: true });
 
+  const isLuffarschack = match.game === "luffarschack";
   const admin = createAdminClient();
   await sendPushToUser(admin, targetUserId, {
-    title: "Din tur i Maxi Yatzy!",
-    body: typeof turnNumber === "number" ? `Runda ${turnNumber}/20` : "Dags att kasta tärningarna.",
+    title: isLuffarschack ? "Din tur i Luffarschack!" : "Din tur i Maxi Yatzy!",
+    body: isLuffarschack
+      ? "Dags att göra ditt drag."
+      : typeof turnNumber === "number"
+        ? `Runda ${turnNumber}/20`
+        : "Dags att kasta tärningarna.",
     url: `/match/${matchId}`,
     tag: `turn-${matchId}-${turnNumber ?? ""}`,
   });

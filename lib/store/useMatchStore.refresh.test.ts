@@ -40,6 +40,7 @@ function makeFakeRepos(): Repositories & {
       async createMatch(mode: MatchMode, playerIds: string[]) {
         const match: Match = {
           id: "m1",
+          game: "maxi_yatzy",
           mode,
           status: "in_progress",
           playerIds,
@@ -119,7 +120,7 @@ describe("useMatchStore.refreshMatch — pull-to-refresh must not lose an in-pro
 
   it("preserves dice/locks/rollsUsedThisTurn when the turn hasn't changed server-side", async () => {
     const { useMatchStore } = await import("./useMatchStore");
-    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"]);
+    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"], "maxi_yatzy");
     await useMatchStore.getState().loadMatch(match.id);
 
     await useMatchStore.getState().roll();
@@ -137,7 +138,7 @@ describe("useMatchStore.refreshMatch — pull-to-refresh must not lose an in-pro
 
   it("does reset the turn when the fetched match shows it's genuinely moved on", async () => {
     const { useMatchStore } = await import("./useMatchStore");
-    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"]);
+    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"], "maxi_yatzy");
     await useMatchStore.getState().loadMatch(match.id);
 
     await useMatchStore.getState().roll();

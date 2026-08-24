@@ -35,7 +35,7 @@ describe("IndexedDbMatchRepository", () => {
     const anna = await players.createPlayer("Anna");
     const bo = await players.createPlayer("Bo");
 
-    const match = await matches.createMatch("shared-device", [anna.id, bo.id]);
+    const match = await matches.createMatch("shared-device", [anna.id, bo.id], "maxi_yatzy");
     expect(match.status).toBe("in_progress");
     expect(match.currentTurnNumber).toBe(1);
 
@@ -54,7 +54,7 @@ describe("IndexedDbMatchRepository", () => {
     const players = new IndexedDbPlayerRepository();
     const matches = new IndexedDbMatchRepository();
     const anna = await players.createPlayer("Anna");
-    const match = await matches.createMatch("separate-devices", [anna.id]);
+    const match = await matches.createMatch("separate-devices", [anna.id], "maxi_yatzy");
 
     await matches.updateMatch({ ...match, currentTurnNumber: 2 });
     const reloaded = await matches.getMatch(match.id);
@@ -72,8 +72,8 @@ describe("IndexedDbMatchRepository", () => {
     const players = new IndexedDbPlayerRepository();
     const matches = new IndexedDbMatchRepository();
     const anna = await players.createPlayer("Anna");
-    const m1 = await matches.createMatch("shared-device", [anna.id]);
-    await matches.createMatch("shared-device", [anna.id]);
+    const m1 = await matches.createMatch("shared-device", [anna.id], "maxi_yatzy");
+    await matches.createMatch("shared-device", [anna.id], "maxi_yatzy");
     await matches.updateMatch({ ...m1, status: "completed" });
 
     expect(await matches.listMatches({ status: "in_progress" })).toHaveLength(1);
@@ -88,7 +88,7 @@ describe("IndexedDbMatchRepository", () => {
     const anna = await players.createPlayer("Anna");
     const bo = await players.createPlayer("Bo");
 
-    const target = await matches.createMatch("shared-device", [anna.id, bo.id]);
+    const target = await matches.createMatch("shared-device", [anna.id, bo.id], "maxi_yatzy");
     await activity.append({
       matchId: target.id,
       playerId: anna.id,
@@ -96,7 +96,7 @@ describe("IndexedDbMatchRepository", () => {
       type: "turn_started",
       payload: null,
     });
-    const other = await matches.createMatch("shared-device", [anna.id]);
+    const other = await matches.createMatch("shared-device", [anna.id], "maxi_yatzy");
     await activity.append({
       matchId: other.id,
       playerId: anna.id,
@@ -124,7 +124,7 @@ describe("IndexedDbActivityRepository", () => {
     const matches = new IndexedDbMatchRepository();
     const activity = new IndexedDbActivityRepository();
     const anna = await players.createPlayer("Anna");
-    const match = await matches.createMatch("shared-device", [anna.id]);
+    const match = await matches.createMatch("shared-device", [anna.id], "maxi_yatzy");
 
     await activity.append({
       matchId: match.id,

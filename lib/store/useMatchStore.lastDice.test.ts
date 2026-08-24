@@ -41,6 +41,7 @@ function makeFakeRepos(): Repositories & {
       async createMatch(mode: MatchMode, playerIds: string[]) {
         const match: Match = {
           id: "m1",
+          game: "maxi_yatzy",
           mode,
           status: "in_progress",
           playerIds,
@@ -129,7 +130,7 @@ describe("useMatchStore — seeding a new turn from the shared dice on the table
 
   it("every turn starts showing whatever the immediately-previous turn left, regardless of whose turn it was", async () => {
     const { useMatchStore } = await import("./useMatchStore");
-    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"]);
+    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"], "maxi_yatzy");
 
     await useMatchStore.getState().loadMatch(match.id);
     expect(useMatchStore.getState().match?.currentPlayerIndex).toBe(0);
@@ -159,7 +160,7 @@ describe("useMatchStore — seeding a new turn from the shared dice on the table
 
   it("a freshly-loaded client (e.g. a second device) sees the same seeded dice", async () => {
     const { useMatchStore } = await import("./useMatchStore");
-    const match = await fakeRepos.matches.createMatch("separate-devices", ["p1", "p2"]);
+    const match = await fakeRepos.matches.createMatch("separate-devices", ["p1", "p2"], "maxi_yatzy");
 
     await useMatchStore.getState().loadMatch(match.id);
     await useMatchStore.getState().roll();

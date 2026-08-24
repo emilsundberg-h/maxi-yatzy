@@ -3,6 +3,7 @@
 import { animate, motion, useMotionValue } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { symbolForPlayer } from "@/lib/domain/luffarschack";
 import { playerBelongsToUser } from "@/lib/domain/players";
 import { matchWinnerId, totalScore } from "@/lib/domain/scoring";
 import type { Match, MatchPlayer, Player } from "@/lib/domain/types";
@@ -42,13 +43,20 @@ export function MatchCard({
   // pointerup would otherwise also fire.
   const wasDragged = useRef(false);
 
-  const winnerId = matchWinnerId(matchPlayers, match.forfeitedByPlayerId);
+  const isLuffarschack = match.game === "luffarschack";
+  // Luffarschack's winner is decided the instant 5-in-a-row lands (or a
+  // forfeit hands it to the opponent) and stored directly — there's no
+  // score to compare, so matchWinnerId()/totalScore() (Yatzy-only) don't
+  // apply here.
+  const winnerId = isLuffarschack ? match.winnerPlayerId : matchWinnerId(matchPlayers, match.forfeitedByPlayerId);
   const winner = matchPlayers.find((mp) => mp.playerId === winnerId);
   const isCompleted = match.status === "completed";
   const activePlayerId = match.playerIds[match.currentPlayerIndex];
   const isYourTurn =
     !isCompleted &&
     (match.mode === "shared-device" || playerBelongsToUser(players[activePlayerId], currentUserId));
+  // No natural denominator for Luffarschack's unbounded board — only Yatzy
+  // gets a fill bar toward its fixed 20 categories.
   const progress = Math.min(1, (match.currentTurnNumber - 1) / ALL_CATEGORY_IDS.length);
   const cardTint =
     isYourTurn && !isCompleted
@@ -136,19 +144,39 @@ export function MatchCard({
         />
         <div className="flex items-center justify-between gap-2">
           <span className="font-serif text-xl text-paper">
-            {match.playerIds.map((id) => players[id]?.name ?? "?").join(" · ")}
+            {isLuffarschack
+              ? match.playerIds
+                  .map(
+                    (id) =>
+                      `${players[id]?.name ?? "?"} (${symbolForPlayer(match.playerIds, id) === "kryss" ? "✕" : "○"})`,
+                  )
+                  .join(" · ")
+              : match.playerIds.map((id) => players[id]?.name ?? "?").join(" · ")}
           </span>
-          <span
-            className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-extrabold tracking-[.14em]"
-            style={{
-              borderColor:
-                match.mode === "shared-device"
-                  ? "rgba(90,168,143,.4)"
-                  : "color-mix(in srgb, var(--color-gold) 40%, transparent)",
-              color: match.mode === "shared-device" ? "#8bbfae" : "var(--color-gold)",
-            }}
-          >
-            {match.mode === "shared-device" ? "SAMMA ENHET" : "EGNA ENHETER"}
+          <span className="flex shrink-0 items-center gap-1">
+            {isLuffarschack && (
+              <span
+                className="rounded-full border px-2 py-0.5 text-[9px] font-extrabold tracking-[.14em]"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--color-gold) 40%, transparent)",
+                  color: "var(--color-gold)",
+                }}
+              >
+                LUFFARSCHACK
+              </span>
+            )}
+            <span
+              className="rounded-full border px-2 py-0.5 text-[9px] font-extrabold tracking-[.14em]"
+              style={{
+                borderColor:
+                  match.mode === "shared-device"
+                    ? "rgba(90,168,143,.4)"
+                    : "color-mix(in srgb, var(--color-gold) 40%, transparent)",
+                color: match.mode === "shared-device" ? "#8bbfae" : "var(--color-gold)",
+              }}
+            >
+              {match.mode === "shared-device" ? "SAMMA ENHET" : "EGNA ENHETER"}
+            </span>
           </span>
         </div>
 
@@ -188,8 +216,10 @@ export function MatchCard({
           {isCompleted ? (
             <span className="flex items-center gap-1.5 text-muted">
               <span className="text-gold-bright">♛</span>
-              {winner && players[winner.playerId]
-                ? `${players[winner.playerId].name} vann · ${totalScore(winner.scores)}p`
+              {winnerId && players[winnerId]
+                ? isLuffarschack
+                  ? `${players[winnerId].name} vann`
+                  : `${players[winnerId].name} vann · ${totalScore(winner!.scores)}p`
                 : "Avslutad"}
               {match.forfeitedByPlayerId && (
                 <span className="text-[10px] text-muted-dim">
@@ -212,11 +242,13 @@ export function MatchCard({
               {isYourTurn ? "Din tur" : `${players[activePlayerId]?.name ?? "?"} slår nu`}
             </span>
           )}
-          <span className="tabular-nums text-muted">
-            Runda {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length}
-          </span>
+          {!isLuffarschack && (
+            <span className="tabular-nums text-muted">
+              Runda {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length}
+            </span>
+          )}
         </div>
-        {!isCompleted && (
+        {!isCompleted && !isLuffarschack && (
           <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface">
             <div
               className="h-full"

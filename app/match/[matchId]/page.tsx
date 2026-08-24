@@ -1,308 +1,46 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { PullToRefreshIndicator } from "@/components/dashboard/PullToRefreshIndicator";
-import { DiceColumn } from "@/components/dice/DiceColumn";
-import { ROLL_MAX_DURATION_S } from "@/components/dice/Die";
-import { ActivityFeed } from "@/components/match/ActivityFeed";
-import { RollControls } from "@/components/match/RollControls";
-import { WinnerModal } from "@/components/match/WinnerModal";
-import { ScorecardGrid } from "@/components/scorecard/ScorecardGrid";
-import { scoreCategory } from "@/lib/domain/categories";
-import { playerBelongsToUser } from "@/lib/domain/players";
-import { matchWinnerId, totalScore } from "@/lib/domain/scoring";
-import { canRoll as engineCanRoll } from "@/lib/domain/turn";
-import { ALL_CATEGORY_IDS } from "@/lib/domain/types";
-import { useActivityFeed } from "@/lib/hooks/useActivityFeed";
-import { usePullToRefresh } from "@/lib/hooks/usePullToRefresh";
-import { useAuthStore } from "@/lib/store/useAuthStore";
-import { useMatchStore } from "@/lib/store/useMatchStore";
-import { getProfiles, type Profile } from "@/lib/supabase/profiles";
+import { LuffarschackMatchView } from "@/components/luffarschack/LuffarschackMatchView";
+import type { GameType } from "@/lib/domain/types";
+import { getRepositories } from "@/lib/repositories";
+import { YatzyMatchView } from "./YatzyMatchView";
 
-// A little longer than the dice's own longest possible roll animation
-// (see ROLL_MAX_DURATION_S in Die.tsx), so the scorecard preview never
-// reveals a result before the dice visually finish tumbling.
-const DICE_SETTLE_DELAY_MS = ROLL_MAX_DURATION_S * 1000 + 60;
-
+// Thin dispatcher: learns which game this match is playing, then hands off
+// to that game's own view/store entirely — Maxi Yatzy (useMatchStore, dice
+// + scorecard) and Luffarschack (useLuffarschackStore, the grid board) are
+// kept as two separate stores/views (see useLuffarschackStore.ts for why),
+// so only one of them ever mounts for a given match instead of both loading
+// in parallel.
 export default function MatchPage() {
   const { matchId } = useParams<{ matchId: string }>();
-  const {
-    match,
-    matchPlayers,
-    players,
-    turn,
-    poolDeltaSoFar,
-    loading,
-    error,
-    loadMatch,
-    refreshMatch,
-    subscribeToMatch,
-    roll,
-    toggleLock,
-    score,
-    reset,
-  } = useMatchStore();
-  const authUserId = useAuthStore((s) => s.user?.id);
-  const events = useActivityFeed(match?.id);
-  const {
-    pullDistance,
-    refreshing: pullRefreshing,
-    threshold: pullThreshold,
-  } = usePullToRefresh(() => refreshMatch(matchId));
-  const [handoffAcknowledged, setHandoffAcknowledged] = useState(false);
-  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, Profile>>({});
-  const [diceSettled, setDiceSettled] = useState(true);
-  const [trackedRollCount, setTrackedRollCount] = useState(turn.rollsUsedThisTurn);
-  const [trackedStatus, setTrackedStatus] = useState(match?.status);
-  const [showWinnerModal, setShowWinnerModal] = useState(false);
-  const [shaking, setShaking] = useState(false);
-  const [trackedDiceSettled, setTrackedDiceSettled] = useState(diceSettled);
-
-  const turnKey = match ? `${match.currentPlayerIndex}:${match.currentTurnNumber}` : undefined;
-  const [trackedTurnKey, setTrackedTurnKey] = useState(turnKey);
-  if (turnKey !== trackedTurnKey) {
-    setTrackedTurnKey(turnKey);
-    setHandoffAcknowledged(false);
-    setDiceSettled(true);
-  }
-
-  if (turn.rollsUsedThisTurn !== trackedRollCount) {
-    setTrackedRollCount(turn.rollsUsedThisTurn);
-    if (turn.rollsUsedThisTurn > 0) setDiceSettled(false);
-  }
-
-  // Fires once, right when the last score of the match gets locked in —
-  // `trackedStatus !== undefined` skips the initial load of an
-  // already-finished match, which shouldn't replay the celebration.
-  if (match && match.status !== trackedStatus) {
-    const justCompleted = match.status === "completed" && trackedStatus !== undefined;
-    setTrackedStatus(match.status);
-    if (justCompleted) setShowWinnerModal(true);
-  }
+  const [game, setGame] = useState<GameType>();
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (diceSettled) return;
-    const timeout = setTimeout(() => setDiceSettled(true), DICE_SETTLE_DELAY_MS);
-    return () => clearTimeout(timeout);
-  }, [diceSettled]);
-
-  useEffect(() => {
-    if (!shaking) return;
-    const timeout = setTimeout(() => setShaking(false), 1000);
-    return () => clearTimeout(timeout);
-  }, [shaking]);
-
-  useEffect(() => {
-    loadMatch(matchId);
-    const unsubscribe = subscribeToMatch(matchId);
+    let cancelled = false;
+    getRepositories()
+      .matches.getMatch(matchId)
+      .then((match) => {
+        if (cancelled) return;
+        if (match) setGame(match.game);
+        else setNotFound(true);
+      });
     return () => {
-      unsubscribe();
-      reset();
+      cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
-  useEffect(() => {
-    const userIds = [
-      ...new Set(Object.values(players).map((p) => p.linkedUserId).filter((id): id is string => !!id)),
-    ];
-    if (userIds.length === 0) return;
-    getProfiles(userIds).then(setProfilesByUserId);
-  }, [players]);
-
-  // Wraps every return point so pulling down to refresh works everywhere
-  // on this page (loading/error/handoff/completed/live), not just the
-  // main scorecard view.
-  function withPullToRefresh(children: React.ReactNode) {
-    return (
-      <div className="relative flex-1">
-        <PullToRefreshIndicator
-          pullDistance={pullDistance}
-          refreshing={pullRefreshing}
-          threshold={pullThreshold}
-        />
-        <div
-          style={{
-            transform: `translateY(${pullRefreshing ? pullThreshold : pullDistance}px)`,
-            transition:
-              pullRefreshing || pullDistance === 0 ? "transform 200ms ease-out" : undefined,
-          }}
-        >
-          {children}
-        </div>
-      </div>
-    );
+  if (notFound) {
+    return <div className="p-8 text-center text-red-400">Match not found</div>;
   }
-
-  if (loading || !match) {
-    return withPullToRefresh(
-      <div className="p-8 text-center text-paper-dim">Laddar match…</div>,
-    );
+  if (!game) {
+    return <div className="p-8 text-center text-paper-dim">Laddar match…</div>;
   }
-  if (error) {
-    return withPullToRefresh(<div className="p-8 text-center text-red-400">{error}</div>);
-  }
-
-  const activePlayerId = match.playerIds[match.currentPlayerIndex];
-  const activeMatchPlayer = matchPlayers.find((mp) => mp.playerId === activePlayerId);
-  const activePlayerName = players[activePlayerId]?.name ?? "Spelare";
-  const pool = activeMatchPlayer ? activeMatchPlayer.pool + poolDeltaSoFar : 0;
-  const isLocalPlayersTurn =
-    match.mode === "shared-device" || playerBelongsToUser(players[activePlayerId], authUserId);
-  const hasRolled = turn.rollsUsedThisTurn > 0;
-
-  // Fires only on the render where the dice actually finish tumbling (the
-  // settle timeout flipping this from false to true) — never on the render
-  // that starts a roll, where `diceSettled` would still read its stale
-  // pre-roll value.
-  if (diceSettled !== trackedDiceSettled) {
-    setTrackedDiceSettled(diceSettled);
-    if (diceSettled && hasRolled && isLocalPlayersTurn && scoreCategory("maxiYatzy", turn.dice) > 0) {
-      setShaking(true);
-    }
-  }
-
-  if (match.status === "completed") {
-    const ranked = [...matchPlayers].sort(
-      (a, b) => totalScore(b.scores) - totalScore(a.scores),
-    );
-    const winnerId = matchWinnerId(matchPlayers, match.forfeitedByPlayerId);
-    const winner = matchPlayers.find((mp) => mp.playerId === winnerId);
-    return withPullToRefresh(
-      <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 p-4 sm:p-8">
-        {showWinnerModal && winnerId && winner && (
-          <WinnerModal
-            winnerName={players[winnerId]?.name ?? "Spelare"}
-            winnerScore={totalScore(winner.scores)}
-            onClose={() => setShowWinnerModal(false)}
-          />
-        )}
-        <div className="text-[10px] font-extrabold tracking-[.24em] text-gold">
-          MATCH AVSLUTAD
-        </div>
-        <h1 className="max-w-full truncate px-4 text-center font-serif text-4xl font-semibold text-paper">
-          {winnerId ? `${players[winnerId]?.name ?? "–"} vann!` : "Match klar"}
-        </h1>
-        {winnerId && winner && (
-          <p className="text-sm text-paper-dim">
-            med {totalScore(winner.scores)} poäng
-          </p>
-        )}
-        {match.forfeitedByPlayerId && (
-          <p className="text-xs text-muted-dim">
-            {players[match.forfeitedByPlayerId]?.name ?? "Spelaren"} gav upp matchen.
-          </p>
-        )}
-        <div className="w-full">
-          <ScorecardGrid
-            matchPlayers={ranked}
-            players={players}
-            profiles={profilesByUserId}
-            playerOrder={ranked.map((mp) => mp.playerId)}
-            activePlayerId=""
-            canScoreActivePlayer={false}
-          />
-        </div>
-        <Link
-          href="/"
-          className="rounded-2xl px-6 py-3 font-extrabold tracking-[.08em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
-          style={{ background: "var(--color-accent-grad)" }}
-        >
-          TILL MATCHER
-        </Link>
-      </div>,
-    );
-  }
-
-  if (match.mode === "shared-device" && !handoffAcknowledged) {
-    return withPullToRefresh(
-      <div className="flex flex-col items-center justify-center gap-6 p-6 text-center">
-        <p className="text-[11px] font-bold tracking-[.2em] text-sage">SKICKA ENHETEN TILL</p>
-        <h1 className="max-w-full truncate font-serif text-4xl font-semibold text-paper sm:text-5xl">
-          {activePlayerName}
-        </h1>
-        <p className="text-xs text-muted">
-          Runda {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length}
-        </p>
-        <button
-          type="button"
-          onClick={() => setHandoffAcknowledged(true)}
-          className="mt-2 rounded-2xl px-8 py-4 text-[15px] font-extrabold tracking-[.08em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4),inset_0_2px_0_rgba(255,255,255,.45)]"
-          style={{ background: "var(--color-accent-grad)" }}
-        >
-          JAG ÄR REDO
-        </button>
-      </div>,
-    );
-  }
-
-  return withPullToRefresh(
-    <motion.div
-      className="mx-auto flex w-full max-w-6xl items-start gap-2 p-2"
-      animate={shaking ? { x: [0, -14, 14, -10, 10, -6, 6, -3, 3, 0] } : { x: 0 }}
-      transition={{ duration: 1, ease: "easeInOut" }}
-    >
-      <div className="min-w-0 flex-1">
-        <ScorecardGrid
-          matchPlayers={matchPlayers}
-          players={players}
-          profiles={profilesByUserId}
-          playerOrder={match.playerIds}
-          activePlayerId={activePlayerId}
-          previewDice={isLocalPlayersTurn && hasRolled && diceSettled ? turn.dice : undefined}
-          canScoreActivePlayer={isLocalPlayersTurn && hasRolled && diceSettled}
-          onScore={score}
-        />
-        {match.mode === "separate-devices" && (
-          <div className="mt-4">
-            <ActivityFeed events={events} players={players} />
-          </div>
-        )}
-      </div>
-
-      {/* No fill here (unlike the scorecard panel) — this panel doesn't sit
-          over scrolling content that needs occluding, so it's free to stay
-          transparent and let the page's own background (incl. a theme's
-          backdrop texture, e.g. Kollegieblock's graph paper) show through
-          behind the dice instead of being hidden under an opaque card. */}
-      <div className="sticky top-2 flex w-[112px] flex-none flex-col items-center gap-3 rounded-2xl border border-gold/15 px-2 pt-2 pb-3 sm:w-[140px] sm:px-3">
-        <Link
-          href="/"
-          className="flex h-7 w-7 shrink-0 items-center justify-center self-start rounded-full border border-gold/25 bg-surface text-sm text-gold-bright"
-        >
-          ‹
-        </Link>
-        <div className="text-center text-[9px] font-bold leading-tight tracking-[.15em] text-gold-bright">
-          RUNDA {match.currentTurnNumber}/{ALL_CATEGORY_IDS.length}
-          <br />
-          {isLocalPlayersTurn ? "DIN TUR" : `${activePlayerName}S TUR`}
-        </div>
-        {isLocalPlayersTurn ? (
-          <>
-            <DiceColumn
-              dice={turn.dice}
-              locked={turn.locked}
-              rollsUsedThisTurn={turn.rollsUsedThisTurn}
-              interactive
-              onToggleLock={toggleLock}
-              size={46}
-            />
-            <RollControls
-              rollsUsedThisTurn={turn.rollsUsedThisTurn}
-              pool={pool}
-              canRoll={engineCanRoll(turn, pool) && diceSettled}
-              onRoll={roll}
-            />
-          </>
-        ) : (
-          <p className="py-4 text-center text-[11px] text-paper-dim">
-            Väntar på {activePlayerName}…
-          </p>
-        )}
-      </div>
-    </motion.div>,
+  return game === "luffarschack" ? (
+    <LuffarschackMatchView matchId={matchId} />
+  ) : (
+    <YatzyMatchView matchId={matchId} />
   );
 }

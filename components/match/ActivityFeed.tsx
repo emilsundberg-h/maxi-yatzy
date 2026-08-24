@@ -1,13 +1,25 @@
 "use client";
 
 import { CATEGORY_LABELS } from "@/lib/domain/categories";
-import type { ActivityEvent, CategoryId, Player } from "@/lib/domain/types";
+import type { Mark } from "@/lib/domain/luffarschack";
+import type { ActivityEvent, CategoryId, GameType, Player } from "@/lib/domain/types";
 
-function describeEvent(event: ActivityEvent, players: Record<string, Player>): string {
+function describeEvent(
+  event: ActivityEvent,
+  players: Record<string, Player>,
+  game: GameType,
+): string {
   const name = players[event.playerId]?.name ?? "Spelare";
   switch (event.type) {
     case "turn_started":
-      return `${name}s tur börjar (kategori ${event.turnNumber}/20)`;
+      return game === "luffarschack"
+        ? `${name}s tur börjar`
+        : `${name}s tur börjar (kategori ${event.turnNumber}/20)`;
+    case "mark_placed": {
+      const payload = event.payload as { x: number; y: number; mark: Mark };
+      const symbol = payload.mark === "kryss" ? "ett kryss" : "en ring";
+      return `${name} satte ${symbol} på (${payload.x}, ${payload.y})`;
+    }
     case "roll": {
       const payload = event.payload as { dice: number[] } | null;
       return `${name} kastade: ${payload?.dice.join(", ") ?? ""}`;
@@ -39,9 +51,10 @@ function describeEvent(event: ActivityEvent, players: Record<string, Player>): s
 interface ActivityFeedProps {
   events: ActivityEvent[];
   players: Record<string, Player>;
+  game?: GameType;
 }
 
-export function ActivityFeed({ events, players }: ActivityFeedProps) {
+export function ActivityFeed({ events, players, game = "maxi_yatzy" }: ActivityFeedProps) {
   const recent = [...events].reverse().slice(0, 12);
 
   return (
@@ -53,7 +66,7 @@ export function ActivityFeed({ events, players }: ActivityFeedProps) {
       <ul className="flex flex-col gap-1.5">
         {recent.map((e) => (
           <li key={e.id} className="text-paper-dim">
-            {describeEvent(e, players)}
+            {describeEvent(e, players, game)}
           </li>
         ))}
       </ul>
