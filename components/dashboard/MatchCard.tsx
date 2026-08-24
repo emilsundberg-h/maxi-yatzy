@@ -143,14 +143,17 @@ export function MatchCard({
           style={{ background: isYourTurn ? "var(--color-gold-bright)" : "var(--color-sage)" }}
         />
         <div className="flex items-center justify-between gap-2">
-          <span className="font-serif text-xl text-paper">
+          <span className="flex flex-wrap items-baseline gap-x-1.5 font-serif text-xl text-paper">
             {isLuffarschack
-              ? match.playerIds
-                  .map(
-                    (id) =>
-                      `${players[id]?.name ?? "?"} (${symbolForPlayer(match.playerIds, id) === "kryss" ? "✕" : "○"})`,
-                  )
-                  .join(" · ")
+              ? match.playerIds.map((id, i) => (
+                  <span key={id} className="flex items-baseline gap-x-1.5">
+                    {i > 0 && <span className="text-paper-dim">·</span>}
+                    <span className="whitespace-nowrap">
+                      {players[id]?.name ?? "?"} (
+                      {symbolForPlayer(match.playerIds, id) === "kryss" ? "✕" : "○"})
+                    </span>
+                  </span>
+                ))
               : match.playerIds.map((id) => players[id]?.name ?? "?").join(" · ")}
           </span>
           <span className="flex shrink-0 items-center gap-1">
