@@ -14,6 +14,7 @@ export interface PlayerRow {
 
 export interface MatchRow {
   id: string;
+  game: Match["game"];
   mode: Match["mode"];
   status: Match["status"];
   player_ids: string[];
@@ -24,6 +25,7 @@ export interface MatchRow {
   completed_at: string | null;
   last_dice: number[] | null;
   forfeited_by_player_id: string | null;
+  winner_player_id: string | null;
 }
 
 export interface MatchPlayerRow {
@@ -56,6 +58,7 @@ export function toPlayer(row: PlayerRow): Player {
 export function toMatch(row: MatchRow): Match {
   return {
     id: row.id,
+    game: row.game,
     mode: row.mode,
     status: row.status,
     playerIds: row.player_ids,
@@ -66,6 +69,7 @@ export function toMatch(row: MatchRow): Match {
     completedAt: row.completed_at ?? undefined,
     lastDice: row.last_dice ? (row.last_dice as Dice) : undefined,
     forfeitedByPlayerId: row.forfeited_by_player_id ?? undefined,
+    winnerPlayerId: row.winner_player_id ?? undefined,
   };
 }
 

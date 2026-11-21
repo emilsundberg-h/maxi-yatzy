@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { MatchMode } from "@/lib/domain/types";
+import type { GameType, MatchMode } from "@/lib/domain/types";
 import { downscaleImage } from "@/lib/downscaleImage";
 import { getRepositories } from "@/lib/repositories";
 import { useAuthStore } from "@/lib/store/useAuthStore";
@@ -189,6 +189,7 @@ export default function NewMatchPage() {
   const { user } = useAuthStore();
   const { players, load, createPlayer, localPlayerId, setPlayerAvatar, linkPlayerToAccount } =
     usePlayersStore();
+  const [game, setGame] = useState<GameType>("maxi_yatzy");
   const [mode, setMode] = useState<MatchMode>("separate-devices");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [inviteTargets, setInviteTargets] = useState<Record<string, InviteTarget>>({});
@@ -240,10 +241,24 @@ export default function NewMatchPage() {
     listProfiles(user.id).then(setOtherProfiles);
   }, [user?.id]);
 
+  // Luffarschack is strictly kryss vs ring — switching to it with a bigger
+  // Maxi Yatzy roster already picked keeps the first two rather than
+  // silently leaving an invalid 3+-player selection in place. Same
+  // tracked-value-in-render pattern as the turn-key checks in
+  // YatzyMatchView, not a useEffect, so this only fires on the render where
+  // `game` actually changes rather than looping through an extra render.
+  const [trackedGame, setTrackedGame] = useState(game);
+  if (game !== trackedGame) {
+    setTrackedGame(game);
+    if (game === "luffarschack") setSelectedIds((prev) => prev.slice(0, 2));
+  }
+
   function toggleSelect(id: string) {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (game === "luffarschack" && prev.length >= 2) return prev;
+      return [...prev, id];
+    });
   }
 
   // Accounts already represented by a player in this roster (linked once
@@ -364,11 +379,12 @@ export default function NewMatchPage() {
 
   async function handleStart() {
     if (selectedIds.length < 1) return;
+    if (game === "luffarschack" && selectedIds.length !== 2) return;
     setCreating(true);
     setStartError(null);
     try {
       const repos = getRepositories();
-      const match = await repos.matches.createMatch(mode, selectedIds);
+      const match = await repos.matches.createMatch(mode, selectedIds, game);
       if (mode === "separate-devices") {
         // fetch() only rejects on network failure — it resolves normally for
         // 4xx/5xx responses too, so each result must be checked explicitly.
@@ -431,6 +447,39 @@ export default function NewMatchPage() {
       </div>
 
       <div>
+        <p className="mb-2 text-[10px] font-extrabold tracking-[.2em] text-sage">SPEL</p>
+        <div className="flex gap-2 rounded-2xl bg-surface p-1">
+          <button
+            type="button"
+            onClick={() => setGame("maxi_yatzy")}
+            className={pillClass(game === "maxi_yatzy")}
+            style={
+              game === "maxi_yatzy" ? { background: "var(--color-accent-grad-muted)" } : undefined
+            }
+          >
+            Maxi Yatzy
+          </button>
+          <button
+            type="button"
+            onClick={() => setGame("luffarschack")}
+            className={pillClass(game === "luffarschack")}
+            style={
+              game === "luffarschack"
+                ? { background: "var(--color-accent-grad-muted)" }
+                : undefined
+            }
+          >
+            Luffarschack
+          </button>
+        </div>
+        {game === "luffarschack" && (
+          <p className="mt-1.5 text-xs text-muted-dim">
+            Luffarschack spelas av exakt 2 — den första du väljer blir kryss (✕), den andra ring (○).
+          </p>
+        )}
+      </div>
+
+      <div>
         <p className="mb-2 text-[10px] font-extrabold tracking-[.2em] text-sage">LÄGE</p>
         <div className="flex gap-2 rounded-2xl bg-surface p-1">
           <button
@@ -479,6 +528,8 @@ export default function NewMatchPage() {
               {players.map((p) => {
                 const isSelf = p.id === localPlayerId;
                 const isSelected = selectedIds.includes(p.id);
+                const luffarschackFull =
+                  game === "luffarschack" && !isSelected && selectedIds.length >= 2;
                 // Already-linked players don't need the picker — there's
                 // nothing to pick, resolveInviteTarget already knows who
                 // they are from their own linkedUserId.
@@ -490,10 +541,13 @@ export default function NewMatchPage() {
                     key={p.id}
                     className="rounded-xl border border-line bg-surface px-3 py-2.5"
                   >
-                    <label className="flex items-center gap-2.5 text-paper">
+                    <label
+                      className={`flex items-center gap-2.5 text-paper ${luffarschackFull ? "opacity-40" : ""}`}
+                    >
                       <input
                         type="checkbox"
                         checked={isSelected}
+                        disabled={luffarschackFull}
                         onChange={() => toggleSelect(p.id)}
                         className="accent-[var(--color-gold)]"
                       />
@@ -506,6 +560,11 @@ export default function NewMatchPage() {
                         )}
                       </div>
                       <span>{p.name}</span>
+                      {game === "luffarschack" && isSelected && (
+                        <span className="text-xs text-gold-bright">
+                          {selectedIds.indexOf(p.id) === 0 ? "✕ kryss" : "○ ring"}
+                        </span>
+                      )}
                       {isSelf && <span className="ml-auto text-xs text-muted">Du</span>}
                       {!isSelf && p.linkedUserId && (
                         <span className="ml-auto text-xs text-muted">
@@ -639,7 +698,11 @@ export default function NewMatchPage() {
 
       <button
         type="button"
-        disabled={selectedIds.length === 0 || creating}
+        disabled={
+          selectedIds.length === 0 ||
+          creating ||
+          (game === "luffarschack" && selectedIds.length !== 2)
+        }
         onClick={handleStart}
         className="rounded-2xl px-6 py-3.5 font-extrabold tracking-[.06em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4)] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
         style={{ background: "var(--color-accent-grad)" }}

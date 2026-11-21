@@ -1,4 +1,5 @@
 import type {
+  GameType,
   Match,
   MatchMode,
   MatchPlayer,
@@ -8,16 +9,20 @@ import type { MatchRepository } from "@/lib/repositories/types";
 import { getDb } from "./db";
 
 export class IndexedDbMatchRepository implements MatchRepository {
-  async createMatch(mode: MatchMode, playerIds: string[]): Promise<Match> {
+  async createMatch(mode: MatchMode, playerIds: string[], game: GameType): Promise<Match> {
     const now = new Date().toISOString();
     const match: Match = {
       id: crypto.randomUUID(),
+      game,
       mode,
       status: "in_progress",
       playerIds,
-      // Random starting player; every turn after that rotates in playerIds
-      // order (see useMatchStore's score() action).
-      currentPlayerIndex: Math.floor(Math.random() * playerIds.length),
+      // Luffarschack: kryss (playerIds[0]) always opens, no randomness — see
+      // symbolForPlayer() in lib/domain/luffarschack.ts. Every other game
+      // keeps a random starting player; every turn after that rotates in
+      // playerIds order (see useMatchStore's score() action).
+      currentPlayerIndex:
+        game === "luffarschack" ? 0 : Math.floor(Math.random() * playerIds.length),
       currentTurnNumber: 1,
       createdAt: now,
       updatedAt: now,

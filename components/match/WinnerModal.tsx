@@ -5,11 +5,23 @@ import { Confetti } from "./Confetti";
 
 interface WinnerModalProps {
   winnerName: string;
-  winnerScore: number;
+  // Maxi Yatzy wins on total score; Luffarschack wins on 5-in-a-row and has
+  // no numeric score, so this — and the "med N poäng" line — is optional.
+  winnerScore?: number;
+  // Extra line shown instead of/alongside the score, e.g. Luffarschack's
+  // "med fem i rad".
+  subtitle?: string;
+  ctaLabel?: string;
   onClose: () => void;
 }
 
-export function WinnerModal({ winnerName, winnerScore, onClose }: WinnerModalProps) {
+export function WinnerModal({
+  winnerName,
+  winnerScore,
+  subtitle,
+  ctaLabel = "VISA PROTOKOLL",
+  onClose,
+}: WinnerModalProps) {
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-6">
       <Confetti />
@@ -23,14 +35,17 @@ export function WinnerModal({ winnerName, winnerScore, onClose }: WinnerModalPro
           MATCH AVSLUTAD
         </div>
         <h2 className="font-serif text-3xl font-semibold text-paper">{winnerName} vann!</h2>
-        <p className="text-sm text-paper-dim">med {winnerScore} poäng</p>
+        {winnerScore !== undefined && (
+          <p className="text-sm text-paper-dim">med {winnerScore} poäng</p>
+        )}
+        {subtitle && <p className="text-sm text-paper-dim">{subtitle}</p>}
         <button
           type="button"
           onClick={onClose}
           className="mt-4 w-full rounded-2xl px-6 py-3 font-extrabold tracking-[.08em] text-[var(--color-ink)] shadow-[0_12px_26px_rgba(0,0,0,.4)]"
           style={{ background: "var(--color-accent-grad)" }}
         >
-          VISA PROTOKOLL
+          {ctaLabel}
         </button>
       </motion.div>
     </div>

@@ -16,6 +16,12 @@ interface RankingRow {
   bestScore: number;
 }
 
+interface LuffarschackRankingRow {
+  id: string;
+  name: string;
+  wins: number;
+}
+
 export default function RankingPage() {
   const authUserId = useAuthStore((s) => s.user?.id);
   const { players, load, loaded } = usePlayersStore();
@@ -26,6 +32,7 @@ export default function RankingPage() {
   >();
   const [personalHigh, setPersonalHigh] = useState<number | undefined>();
   const [personalWins, setPersonalWins] = useState(0);
+  const [luffarschackRows, setLuffarschackRows] = useState<LuffarschackRankingRow[]>([]);
   const attemptedExtraPlayerIds = useRef(new Set<string>());
 
   useEffect(() => {
@@ -65,6 +72,11 @@ export default function RankingPage() {
 
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
+        // This loop is Maxi Yatzy's own score-based stats pass — a
+        // Luffarschack match has no `scores` to total (its match_players
+        // rows are created but left empty), so it's tallied separately
+        // below instead of silently contributing a spurious "0 poäng".
+        if (match.game === "luffarschack") continue;
         const mps = matchPlayersByMatch[i];
         // Whoever forfeited is excluded from winning this match (even on a
         // tied or highest score) but their actual score still counts
@@ -89,6 +101,26 @@ export default function RankingPage() {
           }
         }
       }
+
+      // Luffarschack: no score to total, the winner is already decided and
+      // stored on the match (5-in-a-row, or the opponent of whoever
+      // forfeited) — just tally it up, no topScore/contenders needed.
+      const luffarschackWinsById: Record<string, number> = {};
+      const luffarschackNameById: Record<string, string> = {};
+      for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        if (match.game !== "luffarschack" || !match.winnerPlayerId) continue;
+        const id = canonicalPlayerId(match.winnerPlayerId, resolvedPlayersById);
+        luffarschackNameById[id] = resolvedPlayersById[match.winnerPlayerId]?.name ?? "?";
+        luffarschackWinsById[id] = (luffarschackWinsById[id] ?? 0) + 1;
+      }
+      const nextLuffarschackRows = Object.keys(luffarschackWinsById).map((id) => ({
+        id,
+        name: luffarschackNameById[id] ?? "?",
+        wins: luffarschackWinsById[id],
+      }));
+      nextLuffarschackRows.sort((a, b) => b.wins - a.wins);
+      setLuffarschackRows(nextLuffarschackRows);
 
       const ids = new Set([...Object.keys(winsById), ...Object.keys(bestById)]);
       const nextRows = [...ids].map((id) => ({
@@ -192,6 +224,35 @@ export default function RankingPage() {
             </div>
           ))}
           {rows.length === 0 && (
+            <p className="text-sm text-muted-dim">Inga avslutade matcher ännu.</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-[10px] font-extrabold tracking-[.24em] text-sage">
+          LUFFARSCHACK — FLEST VINSTER
+        </h2>
+        <div className="flex flex-col">
+          {luffarschackRows.map((row, i) => (
+            <div
+              key={row.id}
+              className="flex items-center gap-3 border-b border-line py-2.5"
+            >
+              <span
+                className={`w-6 text-center font-serif text-xl ${
+                  i === 0 ? "text-gold-bright" : "text-paper-dim"
+                }`}
+              >
+                {i + 1}
+              </span>
+              <div className="flex-1 text-sm font-semibold text-paper">{row.name}</div>
+              <span className="font-serif text-2xl font-semibold text-paper tabular-nums">
+                {row.wins}
+              </span>
+            </div>
+          ))}
+          {luffarschackRows.length === 0 && (
             <p className="text-sm text-muted-dim">Inga avslutade matcher ännu.</p>
           )}
         </div>

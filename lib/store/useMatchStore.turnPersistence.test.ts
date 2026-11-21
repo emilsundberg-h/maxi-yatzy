@@ -38,6 +38,7 @@ function makeFakeRepos(): Repositories & {
       async createMatch(mode: MatchMode, playerIds: string[]) {
         const match: Match = {
           id: "m1",
+          game: "maxi_yatzy",
           mode,
           status: "in_progress",
           playerIds,
@@ -139,7 +140,7 @@ describe("useMatchStore — in-progress turn survives closing and reopening the 
 
   it("restores dice/locks/rollsUsedThisTurn on a fresh loadMatch after a roll", async () => {
     const { useMatchStore } = await import("./useMatchStore");
-    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"]);
+    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"], "maxi_yatzy");
     await useMatchStore.getState().loadMatch(match.id);
 
     await useMatchStore.getState().roll();
@@ -159,7 +160,7 @@ describe("useMatchStore — in-progress turn survives closing and reopening the 
 
   it("does not restore a stored turn that belongs to a different turn", async () => {
     const { useMatchStore } = await import("./useMatchStore");
-    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"]);
+    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"], "maxi_yatzy");
     await useMatchStore.getState().loadMatch(match.id);
     await useMatchStore.getState().roll();
 
@@ -180,7 +181,7 @@ describe("useMatchStore — in-progress turn survives closing and reopening the 
 
   it("clears the stored turn once the category is scored", async () => {
     const { useMatchStore } = await import("./useMatchStore");
-    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"]);
+    const match = await fakeRepos.matches.createMatch("shared-device", ["p1", "p2"], "maxi_yatzy");
     await useMatchStore.getState().loadMatch(match.id);
     await useMatchStore.getState().roll();
     await useMatchStore.getState().score("chance");

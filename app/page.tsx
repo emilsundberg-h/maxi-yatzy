@@ -236,14 +236,14 @@ export default function DashboardPage() {
             <Link
               href="/ranking"
               aria-label="Ranking"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-gold/20 bg-surface text-base text-gold-bright hover:border-gold/40"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-gold/20 bg-surface text-xl text-gold-bright hover:border-gold/40"
             >
               ♛
             </Link>
             <Link
               href="/profile"
               aria-label="Min profil"
-              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-gold/20 bg-surface text-[10px] font-bold text-paper-dim hover:border-gold/40"
+              className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gold/20 bg-surface text-xs font-bold text-paper-dim hover:border-gold/40"
             >
               {myAvatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

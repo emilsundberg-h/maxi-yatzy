@@ -70,8 +70,14 @@ export interface Player {
 export type MatchMode = "shared-device" | "separate-devices";
 export type MatchStatus = "in_progress" | "completed";
 
+// Which game a match is playing. Maxi Yatzy is the original/default game;
+// Luffarschack is a 2-player pen-and-paper game (kryss vs ring, 5-in-a-row
+// on an unbounded grid) added later — see lib/domain/luffarschack.ts.
+export type GameType = "maxi_yatzy" | "luffarschack";
+
 export interface Match {
   id: string;
+  game: GameType;
   mode: MatchMode;
   status: MatchStatus;
   playerIds: string[];
@@ -85,11 +91,17 @@ export interface Match {
   // set of dice on the table, same as a physical game: whoever's turn it
   // is picks up however the previous player left them, not their own
   // dice from turns ago. Undefined until the match's first turn ends.
+  // Maxi Yatzy only.
   lastDice?: Dice;
   // Set when someone swipes the match away to give up rather than playing
   // it out — that player forfeits and can never be the winner shown for
   // this match, even if their score was highest at the time.
   forfeitedByPlayerId?: string;
+  // Explicit winner for games whose outcome isn't "highest total score"
+  // (Luffarschack: whoever got 5-in-a-row, or the opponent of whoever
+  // forfeited). Maxi Yatzy still determines its winner via matchWinnerId()
+  // from scores and leaves this unset.
+  winnerPlayerId?: string;
 }
 
 export interface MatchPlayer {
@@ -105,7 +117,12 @@ export type ActivityEventType =
   | "lock_toggle"
   | "category_scored"
   | "roll_banked"
-  | "turn_started";
+  | "turn_started"
+  // Luffarschack: a mark placed on the board. payload is
+  // `{ x: number; y: number; mark: "kryss" | "ring" }`. The board itself
+  // isn't stored anywhere — it's derived by replaying a match's
+  // mark_placed events in order (see lib/domain/luffarschack.ts).
+  | "mark_placed";
 
 export interface ActivityEvent {
   id: string;

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, owner_user_id, mode")
+    .select("id, owner_user_id, mode, game")
     .eq("id", matchId)
     .maybeSingle();
   if (matchError) return NextResponse.json({ error: matchError.message }, { status: 500 });
@@ -54,8 +54,9 @@ export async function POST(req: Request) {
       .maybeSingle();
     const inviterName = inviterProfile?.username || user.email?.split("@")[0] || "Någon";
     const modeText = match.mode === "shared-device" ? "på din enhet" : "på egna enheter";
+    const gameName = match.game === "luffarschack" ? "Luffarschack" : "Maxi Yatzy";
     await sendPushToUser(admin, invitedUserId, {
-      title: "Du är inbjuden att spela Maxi Yatzy",
+      title: `Du är inbjuden att spela ${gameName}`,
       body: `${inviterName} bjöd in dig — ${modeText}.`,
       url: "/",
       tag: `invite-${matchId}-${playerId}`,
