@@ -217,28 +217,43 @@ export function ScorecardGrid({
           {orderedPlayerIds.map((id) => {
             const isActive = id === activePlayerId;
             const url = avatarUrl(id);
+            const pool = mpByPlayer.get(id)?.pool ?? 0;
             return (
               <div
                 key={id}
                 className="flex flex-col items-center gap-0.5 border-b border-gold/25 px-0.5 pb-1"
               >
-                <button
-                  type="button"
-                  onClick={() => setExpandedPlayerId(id)}
-                  aria-label={`Visa ${players[id]?.name ?? "spelaren"}s bild`}
-                  className={`flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[9px] font-extrabold ${
-                    isActive
-                      ? "bg-gradient-to-br from-gold-bright to-gold-deep text-[var(--color-ink)]"
-                      : "border border-line bg-surface text-paper-dim"
-                  }`}
-                >
-                  {url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    initials(players[id]?.name ?? "?")
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedPlayerId(id)}
+                    aria-label={`Visa ${players[id]?.name ?? "spelaren"}s bild`}
+                    className={`flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[9px] font-extrabold ${
+                      isActive
+                        ? "bg-gradient-to-br from-gold-bright to-gold-deep text-[var(--color-ink)]"
+                        : "border border-line bg-surface text-paper-dim"
+                    }`}
+                  >
+                    {url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      initials(players[id]?.name ?? "?")
+                    )}
+                  </button>
+                  {pool > 0 && (
+                    // How many extra (banked/borrowed) rolls this player is
+                    // sitting on — otherwise invisible until they actually
+                    // use one mid-turn, which is too late to plan around
+                    // when it's someone else's pool, not your own.
+                    <span
+                      className="absolute -bottom-1 -right-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border border-gold/30 bg-gold/90 px-0.5 text-[8px] font-extrabold leading-none text-[var(--color-ink)]"
+                      aria-label={`${pool} extra kast`}
+                    >
+                      {pool}
+                    </span>
                   )}
-                </button>
+                </div>
                 <span
                   className={`max-w-full truncate text-[9px] font-semibold ${
                     isActive ? "text-gold-bright" : "text-paper-dim"
