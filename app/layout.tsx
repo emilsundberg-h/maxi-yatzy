@@ -1,60 +1,60 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Archivo,
-  Archivo_Black,
-  Caveat,
-  Cormorant_Garamond,
-  Jost,
-  Manrope,
-  Quicksand,
-} from "next/font/google";
+import localFont from "next/font/local";
 import Script from "next/script";
 import { AuthInit } from "@/components/auth/AuthInit";
 import { PendingInviteModal } from "@/components/invites/PendingInviteModal";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+// Self-hosted (not next/font/google): that loader fetches each family's CSS
+// + font file straight from Google's servers *during the build*, and a
+// blocked/rate-limited fetch there crashes the whole build with an opaque
+// "Cannot read properties of null" from next/font's internal parser — it
+// happened twice in a row on Vercel. These are the same latin-subset files
+// Google was already serving (each an actual variable font covering its
+// whole weight range in one file, same as Google's own CSS referenced),
+// just vendored locally so the build never depends on reaching Google Fonts.
+const cormorant = localFont({
+  src: "./fonts/cormorant-garamond/variable.woff2",
   variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: "500 700",
 });
 
-const manrope = Manrope({
+const manrope = localFont({
+  src: "./fonts/manrope/variable.woff2",
   variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: "400 800",
 });
 
 // Loaded for the non-forest Färgteman (color themes) — see app/globals.css'
 // per-theme `--font-serif`/`--font-sans` overrides and lib/theme/themes.ts.
-const archivo = Archivo({
+const archivo = localFont({
+  src: "./fonts/archivo/variable.woff2",
   variable: "--font-archivo",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
 });
 
-const archivoBlack = Archivo_Black({
+const archivoBlack = localFont({
+  src: "./fonts/archivo-black/400.woff2",
   variable: "--font-archivo-black",
-  subsets: ["latin"],
   weight: "400",
 });
 
-const caveat = Caveat({
+const caveat = localFont({
+  src: "./fonts/caveat/variable.woff2",
   variable: "--font-caveat",
-  subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: "500 700",
 });
 
-const quicksand = Quicksand({
+const quicksand = localFont({
+  src: "./fonts/quicksand/variable.woff2",
   variable: "--font-quicksand",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
 });
 
-const jost = Jost({
+const jost = localFont({
+  src: "./fonts/jost/variable.woff2",
   variable: "--font-jost",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: "300 600",
 });
 
 export const metadata: Metadata = {
